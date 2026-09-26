@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>服專出納戰情儀表板</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app" class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">YS</div>
+      <div class="brand-text"><b>裕信汽車 服務部</b><span>服專／出納 服務量能與人才盤點</span></div>
+    </div>
+    <nav id="nav" class="nav"></nav>
+    <div class="side-foot" id="sideFoot"></div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="選單">☰</button>
+      <div class="page-title" id="pageTitle">管理總覽</div>
+      <div class="role-switch" id="roleSwitch" role="tablist">
+        <button data-role="all" class="on">綜合管理</button>
+        <button data-role="SA">服專</button>
+        <button data-role="CA">出納</button>
+      </div>
+      <div class="topbar-right">
+        <span class="data-stamp" id="dataStamp"></span>
+        <select id="userRole" class="user-role" title="目前檢視身分（權限模擬）"></select>
+        <button class="icon-btn filter-toggle" id="filterToggle" aria-label="篩選">⚲ 收合篩選</button>
+      </div>
+    </header>
+    <section class="filterbar" id="filterbar"></section>
+    <div class="filter-chips" id="filterChips"></div>
+    <main class="content" id="content"></main>
+  </div>
+</div>
+<div class="modal" id="modal" hidden><div class="modal-card"><div class="modal-head"><b id="modalTitle"></b><button class="icon-btn" id="modalClose">✕</button></div><div class="modal-body" id="modalBody"></div></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="vendor/echarts.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/importer.js"></script>
+<script src="js/engine.js"></script>
+<script src="data/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/store.js"></script>
+<script src="js/pages-a.js"></script>
+<script src="js/pages-b.js"></script>
+<script src="js/pages-c.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
