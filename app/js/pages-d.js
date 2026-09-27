@@ -96,7 +96,7 @@
       '<div class="section-title">② 個人戰力全排名</div>' +
       card('全排名', '<div style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px 0">' + UI.seg('bwho', [['all', '服專＋出納'], ['SA', '服專'], ['CA', '出納']], bState.who) + UI.seg('bn', [['10', 'Top 10'], ['20', 'Top 20'], ['all', '全部']], bState.n) + '<span class="note" style="align-self:center">合併排名僅供概覽；職務內排名才是同職務比較</span></div><div id="bt2"></div>', { flush: true, tools: UI.exportBtns('bt2') }) +
       '<div class="section-title">③ 出納貢獻</div>' +
-      '<div class="grid g2b">' + card('各廠結帳量由誰承接', '<div class="chart tall" id="bc3"></div>', { sub: '依當月實際廠別之結帳工單' }) +
+      '<div class="grid g2b">' + card('各廠結帳量由誰承接', '<div class="chart" id="bc3"></div>', { sub: '依當月實際廠別之結帳工單；灰色＝其他／支援；滑過看明細' }) +
       card('出納貢獻明細', '<div id="bt3"></div>', { flush: true, tools: UI.exportBtns('bt3'), sub: '占廠結帳比＝本人在所屬廠結帳 ÷ 該廠全部結帳' }) + '</div>' +
       '<div class="section-title">④ 顧客滿意（人員滿意度問卷）</div>' +
       (cms.length ? '<div class="grid g2b">' + card('各廠問卷滿意度', '<div id="bt4"></div>', { flush: true, tools: UI.exportBtns('bt4'), sub: '≥4.95 綠、<4.85 紅；未滿分率＝整體<5分比例' }) +
@@ -155,14 +155,17 @@
     const byPlant = {}; caRows.forEach((r) => { if (plants3.indexOf(r.actualPlant) < 0 || !nn(r.orders)) return; const k = names3.indexOf(r.name) >= 0 && cashiers.find((c) => c.p.name === r.name).p.plant === r.actualPlant ? r.name : '其他／支援'; byPlant[r.actualPlant] = byPlant[r.actualPlant] || {}; byPlant[r.actualPlant][k] = (byPlant[r.actualPlant][k] || 0) + r.orders; });
     const seriesNames = names3.concat(['其他／支援']);
     const pal = ['#16294a', '#3b82f6', '#93c5fd', '#0f766e', '#c3002f'];
-    chart(el.querySelector('#bc3'), {
+    const plTot = {}; plants3.forEach((pl) => { plTot[pl] = sum(Object.values(byPlant[pl] || {})); });
+    const bc3 = el.querySelector('#bc3'); bc3.style.height = Math.max(300, plants3.length * 34 + 40) + 'px';
+    chart(bc3, {
+      legend: { show: false },
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (xs) => xs[0].axisValue + '<br>' + xs.filter((x) => x.value).map((x) => x.marker + x.seriesName + '：' + Number(x.value).toLocaleString() + ' 張').join('<br>') },
       grid: { left: 70, right: 20, top: 16, bottom: 20 }, xAxis: { type: 'value' }, yAxis: { type: 'category', data: plants3.slice().reverse() },
       series: seriesNames.map((n) => {
         const me = cashiers.find((c) => c.p.name === n);
         const idx = me ? cashiers.filter((c) => c.p.plant === me.p.plant).indexOf(me) : -1;
         return { name: n, type: 'bar', stack: 's', barMaxWidth: 16, itemStyle: { color: n === '其他／支援' ? '#d1d5db' : pal[idx % pal.length], borderColor: '#fff', borderWidth: 1 }, data: plants3.slice().reverse().map((pl) => (byPlant[pl] || {})[n] || null),
-          label: { show: true, formatter: (x) => x.value && n !== '其他／支援' ? n : '', fontSize: 10, color: idx >= 2 ? '#111' : '#fff' } };
+          label: { show: true, formatter: (x) => x.value && n !== '其他／支援' && x.value / (plTot[x.name] || 1) >= 0.18 ? n : '', fontSize: 11, color: idx >= 2 ? '#111' : '#fff', overflow: 'truncate' } };
       })
     });
     const t3 = table(el.querySelector('#bt3'), {
