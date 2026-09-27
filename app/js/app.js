@@ -4,7 +4,7 @@
 (function (root) {
   const { Store, UI } = root; const S = Store.S; const esc = UI.esc;
   const NAV = [
-    ['overview', '管理總覽', '總覽'], ['plants', '服務廠比較', '總覽'], ['sa', '服專分析', '量能分析'], ['ca', '出納分析', '量能分析'],
+    ['board', '戰力總表', '總覽'], ['overview', '管理總覽', '總覽'], ['plants', '服務廠比較', '總覽'], ['sa', '服專分析', '量能分析'], ['ca', '出納分析', '量能分析'],
     ['person', '個人分析', '量能分析'], ['monthly', '月度推移', '量能分析'], ['carage', '車齡結構', '量能分析'], ['power', '綜合戰力', '人才盤點'],
     ['grid', '人才九宮格', '人才盤點'], ['ladder', '升階與人才梯隊', '人才盤點'], ['rank', '排行與異常', '人才盤點'], ['quality', '資料品質', '資料與系統'],
     ['import', '資料匯入', '資料與系統'], ['settings', '指標與權重設定', '資料與系統'], ['perms', '權限管理', '資料與系統']
@@ -73,7 +73,7 @@
     });
     $('filterbar').querySelector('[data-role-sel]').addEventListener('change', (e) => setRole(e.target.value));
     $('fClear').addEventListener('click', clearFilters);
-    $('fCompany').addEventListener('click', () => { clearFilters(); setRole('all'); go('overview'); });
+    $('fCompany').addEventListener('click', () => { clearFilters(); setRole('all'); go('board'); });
   }
   function clearFilters() {
     const keep = { period: 'all' };
@@ -111,7 +111,7 @@
   function parseHash() {
     const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
     const [page, ...rest] = h.split('/');
-    S.page = NAV.some((n) => n[0] === page) ? page : 'overview';
+    S.page = NAV.some((n) => n[0] === page) ? page : 'board';
     if (S.page === 'person' && rest.length) S.personId = rest.join('/');
   }
   function go(page, arg) { location.hash = '#/' + page + (arg ? '/' + encodeURIComponent(arg) : ''); }

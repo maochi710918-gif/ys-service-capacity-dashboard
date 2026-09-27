@@ -84,6 +84,7 @@
         '<div class="sw" style="margin-top:10px"><div><b class="up">▲ 優勢構面</b><ul>' + (strengths.map((x) => '<li>' + x.d.label + ' ' + F.pr(x.v) + '</li>').join('') || '<li>尚無構面PR ≥ 50</li>') + '</ul></div><div><b class="down">▼ 短板構面</b><ul>' + (weak.map((x) => '<li>' + x.d.label + ' ' + F.pr(x.v) + '<br><span class="note">建議：' + esc(S.cfg.training[x.d.key] || '') + '</span></li>').join('') || '<li>無明顯短板（各構面PR ≥ 50）</li>') + '</ul></div></div>') +
       '</div>' +
       '<div class="section-title">績效資訊</div>' + card('個人 vs 所屬廠／全公司／同證照／同年資 平均', '<div id="perf"></div>', { flush: true, tools: UI.exportBtns('pf') }) +
+      csiCard(p, D) +
       '<div class="section-title">視覺分析</div><div class="grid g2">' +
       card('戰力構面 PR 雷達', '<div class="chart" id="r1"></div>', { sub: '外圈＝100；比較同證照平均' }) +
       card('最近月份績效', '<div class="chips-sel" id="mkSel"></div><div class="chart" id="r2"></div>', { sub: '個人 vs 當月實際廠別平均 vs 全公司平均（人均）' }) +
@@ -161,6 +162,18 @@
     el.querySelector('#r7').innerHTML = dims.map((d) => { const v = p[d.prKey]; return '<div class="bar-row"><span>' + d.label + '<br><span class="note">權重 ' + Math.round(W[d.key] * 100) + '%</span></span><div class="bar-track"><div class="bar-fill" style="width:' + (nn(v) ? v * 100 : 0) + '%;background:' + (!nn(v) ? 'var(--gray)' : v >= .6 ? 'var(--good)' : v >= .4 ? 'var(--navy-700)' : 'var(--bad)') + '"></div></div><b style="text-align:right;font-family:var(--num)">' + F.pr(v) + '</b></div>'; }).join('') +
       '<p class="note">貢獻分數＝權重 × PR；' + dims.map((d) => d.label.replace('PR', '') + ' ' + (nn(p[d.prKey]) ? (W[d.key] * p[d.prKey] * 100).toFixed(1) : '—')).join('、') + '</p>';
   };
+  function csiCard(p, D) {
+    const X = root.CSIX; if (!X || !X.has()) return '';
+    const cms = X.csiMonths(D.months);
+    if (!cms.length) return '<div class="section-title">顧客問卷</div><div class="banner info"><b>顧客問卷</b><span>所選期間無問卷資料。</span></div>';
+    const me = X.csiAgg((x) => x.a === p.name, D.months), pl = X.csiAgg((x) => x.p === p.plant, D.months), co = X.csiAgg(() => true, D.months);
+    const head = '<div class="section-title">顧客問卷（CSI服務戰情系統｜' + Store.monthLabel(cms) + '）</div>';
+    if (p.role === 'CA') return head + card('所屬廠結帳服務滿意', '<div class="kv" style="grid-template-columns:160px 1fr"><span>' + esc(p.plant) + ' 結帳服務</span><span class="' + X.csiCls(pl && pl.k) + '">' + X.f2(pl && pl.k) + '（' + (pl ? pl.n : 0) + ' 份，未滿分率 ' + F.pct(pl && pl.lkRate) + '）</span><span>全公司結帳服務</span><span>' + X.f2(co && co.k) + '</span></div><p class="note">問卷未記錄出納姓名，僅以所屬廠呈現，作為出納服務背景。</p>');
+    if (!me || !me.n) return head + '<div class="banner info"><b>顧客問卷</b><span>此期間查無 ' + esc(p.name) + ' 的問卷（資料未提供，不視為表現不佳）。</span></div>';
+    const row = (d, l) => '<tr><td>' + l + '</td><td class="num ' + X.csiCls(me[d]) + '"><b>' + X.f2(me[d]) + '</b></td><td class="num">' + X.f2(pl && pl[d]) + '</td><td class="num">' + X.f2(co && co[d]) + '</td></tr>';
+    return head + card('本人問卷滿意度（' + me.n + ' 份）', '<table class="tbl"><thead><tr><th>項目</th><th class="num">本人</th><th class="num">所屬廠</th><th class="num">全公司</th></tr></thead><tbody>' + X.DIMS.map(([d, l]) => row(d, l)).join('') +
+      '<tr><td>整體未滿分率</td><td class="num">' + F.pct(me.loRate) + '</td><td class="num">' + F.pct(pl && pl.loRate) + '</td><td class="num">' + F.pct(co && co.loRate) + '</td></tr><tr><td>文字意見</td><td class="num">' + me.voc + '</td><td class="num">' + (pl ? pl.voc : '—') + '</td><td class="num">' + (co ? co.voc : '—') + '</td></tr></tbody></table>', { flush: true });
+  }
   function PX_MM(role) { return MMET[role].filter((m) => m[3] !== 'age'); }
   function bindPicker(el) { const s = el.querySelector('#pp'); if (s) s.addEventListener('change', () => s.value && root.App.openPerson(s.value)); }
 

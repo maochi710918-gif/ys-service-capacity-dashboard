@@ -65,6 +65,7 @@
       lowCompleteness: 0.70,       // 資料完整度不足
       minValidMonths: 6,           // 有效月份不足
       loadHighRatio: 1.2,          // 服務廠人均負荷 > 全公司平均 × 此比例 → 配置提醒
+      csiMinSurveys: 10,           // 服專問卷排名最低問卷份數
       // KPI 紅黃綠
       kpiYellowPct: -0.05,         // 增減率介於 −5%~0 為黃
       completenessGreen: 0.90,
@@ -121,8 +122,8 @@
     /* ---------- 權限（系統角色） ---------- */
     permissions: {
       '服務部主管': { scope: 'all', pages: '*' },
-      'HRBP': { scope: 'all', pages: ['overview', 'sa', 'ca', 'person', 'power', 'grid', 'ladder', 'rank', 'quality'] },
-      '廠長': { scope: 'plant', pages: ['overview', 'plants', 'sa', 'ca', 'person', 'monthly', 'carage', 'power', 'grid', 'ladder', 'rank', 'quality'] },
+      'HRBP': { scope: 'all', pages: ['board', 'overview', 'sa', 'ca', 'person', 'power', 'grid', 'ladder', 'rank', 'quality'] },
+      '廠長': { scope: 'plant', pages: ['board', 'overview', 'plants', 'sa', 'ca', 'person', 'monthly', 'carage', 'power', 'grid', 'ladder', 'rank', 'quality'] },
       '個人': { scope: 'self', pages: ['person', 'monthly'] },
       '系統管理員': { scope: 'all', pages: '*' }
     }

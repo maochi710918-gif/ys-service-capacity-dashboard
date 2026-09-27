@@ -347,7 +347,7 @@
   /* ======================= 14. 指標與權重設定 ======================= */
   const TH_LABELS = [
     ['戰力與九宮格', [['highPower', '高戰力門檻（分）'], ['midPower', '中戰力門檻（分）'], ['scoreMinCompleteness', '計分所需最低資料完整度（0–1）'], ['promoMinCompleteness', '升階評估最低資料完整度（0–1）'], ['highVolumePR', '高量能 PR 門檻（0–1）']]],
-    ['異常判斷', [['lowQualityPR', '品質偏低：服務品質PR <'], ['goodQualityPR', '品質佳：服務品質PR ≥'], ['lowVolumePR', '量能未釋放：量能PR <'], ['lowPerCarRatio', '單車產值偏低：< 全公司平均 ×'], ['trendDrop', '近3月量能下降：趨勢 ≤'], ['csiDrop', '近3月CSI下降：變化 ≤（點）'], ['ngHighPR', '作業NG偏高：作業品質PR ≤'], ['licenseGap', '證照戰力落差 ≤（分）'], ['topPR', '低年資進入前段：PR ≥'], ['lowCompleteness', '資料完整度不足 <'], ['minValidMonths', '有效月份不足 <（月）'], ['loadHighRatio', '人均負荷偏高：> 全公司平均 ×']]],
+    ['異常判斷', [['lowQualityPR', '品質偏低：服務品質PR <'], ['goodQualityPR', '品質佳：服務品質PR ≥'], ['lowVolumePR', '量能未釋放：量能PR <'], ['lowPerCarRatio', '單車產值偏低：< 全公司平均 ×'], ['trendDrop', '近3月量能下降：趨勢 ≤'], ['csiDrop', '近3月CSI下降：變化 ≤（點）'], ['ngHighPR', '作業NG偏高：作業品質PR ≤'], ['licenseGap', '證照戰力落差 ≤（分）'], ['topPR', '低年資進入前段：PR ≥'], ['lowCompleteness', '資料完整度不足 <'], ['minValidMonths', '有效月份不足 <（月）'], ['loadHighRatio', '人均負荷偏高：> 全公司平均 ×'], ['csiMinSurveys', '服專問卷排名最低份數']]],
     ['KPI 燈號', [['kpiYellowPct', '黃燈：增減率 ≥（負值）'], ['completenessGreen', '完整度綠燈 ≥'], ['completenessYellow', '完整度黃燈 ≥']]]
   ];
   const PROMO_LABELS = [['seniorCore', 'MSA／高級出納 → 核心帶訓候選', ['power', 'service', 'ops']], ['seniorStable', 'MSA／高級出納 → 高階穩定', ['power']], ['candidate', 'SA/SSA/出納專員 → 升階候選', ['power', 'licensePR', 'service', 'ops']], ['near', '接近升階', ['power', 'licensePR']], ['assistant', '服務助理 → SA培養候選', ['power', 'years']]];
