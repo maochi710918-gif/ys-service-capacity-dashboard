@@ -9,20 +9,20 @@
 
   const METRICS = {
     SA: [
-      ['avgCars', '月均接車台數', F.d1, 1], ['avgRevenue', '月均業績', F.money, 1], ['perCar', '單車產值', F.money, 1], ['app', 'APP預約指定', F.pct, 1],
-      ['a1', 'A1準時定保達成', F.pct, 1], ['a2', 'A2準時定保達成', F.pct, 1], ['bodyPaint', '自費鈑噴達成', F.pct, 1], ['csi', 'CSI滿意度', F.csi, 1],
+      ['avgCars', '月均接車台數', F.int, 1], ['capacityRate', '接車量能達成率', F.pct2, 1], ['avgRevenue', '月均業績', F.money, 1], ['perCar', '單車產值', F.money, 1], ['app', 'APP預約指定', F.pct2, 1],
+      ['a1', 'A1準時定保達成', F.pct2, 1], ['a2', 'A2準時定保達成', F.pct2, 1], ['bodyPaint', '自費鈑噴達成', F.pct2, 1], ['csi', 'CSI滿意度', F.csi, 1],
       ['csiFirst', 'CSI首回滿意度', F.csi, 1], ['esSelf', 'ES自主滿意度', F.csi, 1], ['esRedesignate', 'ES服專再指定', F.pct, 1],
       ['ngFeePer100', '每100台收費NG', F.d2, -1], ['ngTimePer100', '每100台時間NG', F.d2, -1], ['keyPer100', '每100台解金鑰', F.d2, -1], ['power', '綜合戰力指數', F.score, 1]
     ],
     CA: [
-      ['avgOrders', '月均結帳工單', F.d1, 1], ['esign', '電子簽名率', F.pct, 1], ['card', '感心卡核卡', F.d2, 1], ['csi', 'CSI滿意度', F.csi, 1], ['csiFirst', 'CSI首回滿意度', F.csi, 1],
+      ['avgOrders', '月均結帳工單', F.int, 1], ['esign', '電子簽名率', F.pct, 1], ['card', '感心卡核卡', F.d2, 1], ['csi', 'CSI滿意度', F.csi, 1], ['csiFirst', 'CSI首回滿意度', F.csi, 1],
       ['esSelf', 'ES自主滿意度', F.csi, 1], ['plantCsiSample', '所屬廠CSI樣本達成率', F.pct, 1], ['ngFeePer100', '每100張工單收費NG', F.d2, -1], ['keyPer100', '每100張工單解金鑰', F.d2, -1], ['power', '綜合戰力指數', F.score, 1]
     ]
   };
   // 月度指標：agg = sum（可加總）| mean（比率）| ratio（業績/接車）
   const MMET = {
-    SA: [['revenue', '個人業績', F.money, 'sum'], ['cars', '接車台數', F.int, 'sum'], ['perCar', '單車產值', F.money, 'ratio'], ['age', '車齡結構', F.pct, 'age'], ['app', 'APP預約指定', F.pct, 'mean'],
-      ['a1', 'A1準時定保達成', F.pct, 'mean'], ['a2', 'A2準時定保達成', F.pct, 'mean'], ['bodyPaint', '自費鈑噴達成', F.pct, 'mean'], ['csi', 'CSI滿意度', F.csi, 'mean'], ['csiFirst', 'CSI首回滿意度', F.csi, 'mean'],
+    SA: [['revenue', '個人業績', F.money, 'sum'], ['cars', '接車台數', F.int, 'sum'], ['perCar', '單車產值', F.money, 'ratio'], ['age', '車齡結構', F.pct, 'age'], ['app', 'APP預約指定', F.pct2, 'mean'],
+      ['a1', 'A1準時定保達成', F.pct2, 'mean'], ['a2', 'A2準時定保達成', F.pct2, 'mean'], ['bodyPaint', '自費鈑噴達成', F.pct2, 'mean'], ['csi', 'CSI滿意度', F.csi, 'mean'], ['csiFirst', 'CSI首回滿意度', F.csi, 'mean'],
       ['esSelf', 'ES自主滿意度', F.csi, 'mean'], ['esRedesignate', 'ES服專再指定', F.pct, 'mean'], ['ngFee', '收費解說NG', F.int, 'sum'], ['ngTime', '時間管理NG', F.int, 'sum'], ['keyUnlock', '解金鑰次數', F.int, 'sum']],
     CA: [['orders', '結帳工單數', F.int, 'sum'], ['esign', '電子簽名率', F.pct, 'mean'], ['card', '感心卡核卡', F.d2, 'mean'], ['csi', 'CSI滿意度', F.csi, 'mean'], ['csiFirst', 'CSI首回滿意度', F.csi, 'mean'],
       ['esSelf', 'ES自主滿意度', F.csi, 'mean'], ['plantCsiSample', '所屬廠CSI樣本達成率', F.pct, 'mean'], ['ngFee', '收費解說NG', F.int, 'sum'], ['keyUnlock', '解金鑰次數', F.int, 'sum']]
@@ -69,12 +69,12 @@
     const strengths = dimVals.slice(0, 2).filter((x) => x.v >= 0.5), weak = dimVals.slice(-2).reverse().filter((x) => strengths.indexOf(x) < 0 && x.v < 0.5);
     el.innerHTML = '<div class="page-head"><div><h1>個人分析｜' + esc(p.name) + '</h1><p>期間 ' + Store.monthLabel(D.months) + '；比較對象皆為同職務現行人員。綜合戰力為管理診斷指標，非正式考核分數。</p></div>' + (Store.perm().scope === 'self' ? '' : picker) + '</div>' +
       (p.status !== '現行' ? '<div class="banner info"><b>非現行人員</b><span>' + esc(p.status) + '：保留期間績效供歷史追溯，不納入目前PR／戰力排名。</span></div>' : '') +
-      (p.completeness < S.cfg.thresholds.lowCompleteness ? '<div class="banner warn"><b>資料完整度 ' + F.pct(p.completeness) + '</b><span>資料不足時判讀宜保守；缺漏不視為績效不佳，不以0分計算。</span></div>' : '') +
+      (p.completeness < S.cfg.thresholds.lowCompleteness ? '<div class="banner warn"><b>資料完整度 ' + F.pct0(p.completeness) + '</b><span>資料不足時判讀宜保守；缺漏不視為績效不佳，不以0分計算。</span></div>' : '') +
       '<div class="profile">' +
       card('基本資料', '<div class="pf-head"><div class="avatar">' + esc(init) + '</div><div><div class="pf-name">' + esc(p.name) + '</div><div class="note">' + esc(p.plant) + '｜' + roleName(role) + '｜' + esc(p.position || '—') + '</div></div></div>' +
         '<div class="kv"><span>角色</span><span>' + roleName(role) + '</span><span>服務廠</span><span>' + esc(p.plant) + '（115.9最新）</span><span>現職</span><span>' + F.text(p.position) + '</span><span>證照</span><span>' + F.text(p.license) + '</span>' +
         '<span>年資</span><span>' + F.years(p.years) + '</span><span>年資群</span><span>' + F.text(p.tenureGroup) + '</span><span>人才成熟度</span><span>' + F.text(p.maturity) + '</span><span>人員狀態</span><span>' + esc(p.status) + '</span>' +
-        '<span>有效資料月份</span><span>' + p.validMonths + ' 個月</span><span>資料完整度</span><span>' + F.pct(p.completeness) + '</span>' +
+        '<span>有效資料月份</span><span>' + p.validMonths + ' 個月</span><span>資料完整度</span><span>' + F.pct0(p.completeness) + '</span>' +
         '<span>歷史實際廠別</span><span>' + (p.plantHistory.length ? esc(p.plantHistory.join('、')) : '與最新廠別一致') + '</span></div>') +
       card('戰力與人才盤點', '<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><div><div class="note">綜合戰力指數</div><div class="score-big" style="color:var(--' + (pos === 'green' ? 'good' : pos === 'red' ? 'bad' : pos === 'gray' ? 'gray' : 'navy-700') + ')">' + F.score(p.power) + '</div><div class="note">' + esc(p.powerBand) + '</div></div>' +
         '<div class="kv" style="flex:1;min-width:260px;grid-template-columns:110px 1fr;margin:0"><span>個人排名</span><span>' + (nn(p.rank) ? p.rank + ' / ' + scored.length : '—') + '</span><span>同證照PR</span><span>' + F.pr(p.prLicense) + '</span><span>同年資PR</span><span>' + F.pr(p.prTenure) + '</span>' +
@@ -121,10 +121,10 @@
       const mine = ms.map((mo) => { const r = p.monthly.filter((x) => x.month === mo); return aggRows(r, m[0], m[3], false); });
       const plantAvg = ms.map((mo) => { const pr = p.monthly.find((x) => x.month === mo); const pl = pr ? pr.actualPlant : p.plant; return aggRows(allRows.filter((x) => x.month === mo && x.actualPlant === pl && x.status === '現行'), m[0], m[3], true); });
       const coAvg = ms.map((mo) => aggRows(allRows.filter((x) => x.month === mo && x.status === '現行'), m[0], m[3], true));
-      const tf = (v) => nn(v) ? (m[2] === F.pct ? +(v * 100).toFixed(2) : +v.toFixed(2)) : null;
+      const tf = (v) => nn(v) ? ((m[2] === F.pct || m[2] === F.pct2) ? +(v * 100).toFixed(2) : +v.toFixed(2)) : null;
       chart(el.querySelector('#r2'), {
         color: [C.red, C.navy2, C.gray], legend: { data: ['本人', '所屬廠平均', '全公司平均'] }, tooltip: { trigger: 'axis' },
-        xAxis: { type: 'category', data: ms.map((x) => x.slice(5) + '月') }, yAxis: { type: 'value', scale: true, name: m[2] === F.pct ? '%' : '' },
+        xAxis: { type: 'category', data: ms.map((x) => x.slice(5) + '月') }, yAxis: { type: 'value', scale: true, name: (m[2] === F.pct || m[2] === F.pct2) ? '%' : '' },
         series: [{ name: '本人', type: 'line', data: mine.map(tf), symbolSize: 8, lineStyle: { width: 3 } }, { name: '所屬廠平均', type: 'line', data: plantAvg.map(tf), lineStyle: { type: 'dashed' } }, { name: '全公司平均', type: 'line', data: coAvg.map(tf), lineStyle: { type: 'dotted' } }]
       });
     };
@@ -229,7 +229,7 @@
     UI.bindSeg(el, 'mrole', (v) => { mState.role = v; mState.who = ''; root.App.render(); });
     el.querySelector('#who').addEventListener('change', (e) => { mState.who = e.target.value; root.App.render(); });
     el.querySelectorAll('#mm button').forEach((b) => b.addEventListener('click', () => { mState.mk = b.dataset.k; root.App.render(); }));
-    const tf = (v) => nn(v) ? (m[2] === F.pct ? +(v * 100).toFixed(2) : +(+v).toFixed(2)) : null;
+    const tf = (v) => nn(v) ? ((m[2] === F.pct || m[2] === F.pct2) ? +(v * 100).toFixed(2) : +(+v).toFixed(2)) : null;
     const xs = series.map((s) => s.k);
     if (m[3] === 'age') {
       chart(el.querySelector('#mc'), { color: [C.sky, C.navy2, C.navy, C.gray], tooltip: { trigger: 'axis', valueFormatter: (v) => nn(v) ? v.toFixed(1) + '%' : '—' }, legend: { data: ['3年內', '3–8年', '8年以上', '車齡缺漏'] },
@@ -239,7 +239,7 @@
       const ser = [{ name: who ? '本人' : m[1], type: m[3] === 'sum' ? 'bar' : 'line', data: series.map((s) => tf(s.v)), barMaxWidth: 34, symbolSize: 8, itemStyle: { color: who ? C.red : C.navy } }];
       if (who) ser.push({ name: '所屬廠平均', type: 'line', data: series.map((s) => tf(s.plantAvg)), lineStyle: { type: 'dashed' }, itemStyle: { color: C.navy2 } }, { name: '全公司平均', type: 'line', data: series.map((s) => tf(s.coAvg)), lineStyle: { type: 'dotted' }, itemStyle: { color: C.gray } });
       ser.push({ name: '3期移動平均', type: 'line', data: series.map((s) => tf(s.ma)), lineStyle: { type: 'dashed', width: 1.5 }, itemStyle: { color: C.amber }, symbol: 'none' });
-      chart(el.querySelector('#mc'), { tooltip: { trigger: 'axis' }, legend: { data: ser.map((s) => s.name) }, xAxis: { type: 'category', data: xs }, yAxis: { type: 'value', scale: m[3] !== 'sum', name: m[2] === F.pct ? '%' : '' }, series: ser });
+      chart(el.querySelector('#mc'), { tooltip: { trigger: 'axis' }, legend: { data: ser.map((s) => s.name) }, xAxis: { type: 'category', data: xs }, yAxis: { type: 'value', scale: m[3] !== 'sum', name: (m[2] === F.pct || m[2] === F.pct2) ? '%' : '' }, series: ser });
     }
     const cols = m[3] === 'age' ? [
       { key: 'k', label: '期間' }, { key: 'c', label: '接車台數', num: true, fmt: F.int }, { key: 'a3', label: '3年內', num: true, fmt: F.pct }, { key: 'a38', label: '3–8年', num: true, fmt: F.pct }, { key: 'a8', label: '8年以上', num: true, fmt: F.pct }, { key: 'miss', label: '車齡缺漏', num: true, fmt: F.pct }
@@ -248,9 +248,9 @@
       m[3] === 'sum' ? { key: 'cum', label: '累積值', num: true, fmt: m[2] } : null, { key: 'ma', label: '3期移動平均', num: true, fmt: m[2] },
       { key: 'yoy', label: '同期比較', get: () => null, html: () => '<span class="na">資料未提供</span>' },
       who ? { key: 'plantName', label: '當期實際廠別' } : null, who ? { key: 'plantAvg', label: '所屬廠平均', num: true, fmt: m[2] } : null,
-      who ? { key: 'dPlant', label: '與廠平均差', num: true, get: (r) => nn(r.v) && nn(r.plantAvg) ? r.v - r.plantAvg : null, fmt: m[2] === F.pct ? (v) => (v > 0 ? '+' : '') + (v * 100).toFixed(1) + 'pt' : F.signed1 } : null,
+      who ? { key: 'dPlant', label: '與廠平均差', num: true, get: (r) => nn(r.v) && nn(r.plantAvg) ? r.v - r.plantAvg : null, fmt: (m[2] === F.pct || m[2] === F.pct2) ? (v) => (v > 0 ? '+' : '') + (v * 100).toFixed(1) + 'pt' : F.signed1 } : null,
       { key: 'coAvg', label: who ? '全公司人均' : '全公司' + (m[3] === 'sum' ? '合計' : '平均'), num: true, fmt: m[2] },
-      who ? { key: 'dCo', label: '與全公司差', num: true, get: (r) => nn(r.v) && nn(r.coAvg) ? r.v - r.coAvg : null, fmt: m[2] === F.pct ? (v) => (v > 0 ? '+' : '') + (v * 100).toFixed(1) + 'pt' : F.signed1 } : null
+      who ? { key: 'dCo', label: '與全公司差', num: true, get: (r) => nn(r.v) && nn(r.coAvg) ? r.v - r.coAvg : null, fmt: (m[2] === F.pct || m[2] === F.pct2) ? (v) => (v > 0 ? '+' : '') + (v * 100).toFixed(1) + 'pt' : F.signed1 } : null
     ].filter(Boolean);
     const t = table(el.querySelector('#mt'), { columns: cols, rows: series, footer: false });
     UI.bindExport(el, 'mt', '月度推移_' + m[1], t);
@@ -264,12 +264,12 @@
     const sh = (v) => tc ? v / tc : null;
     const byPlant = {};
     rows.forEach((r) => { const k = r.actualPlant; const o = byPlant[k] = byPlant[k] || { plant: k, c: 0, c3: 0, c38: 0, c8: 0, rev: 0, bp: [] }; o.c += r.cars || 0; o.c3 += r.cars3 || 0; o.c38 += r.cars38 || 0; o.c8 += r.cars8 || 0; o.rev += r.revenue || 0; if (nn(r.bodyPaint)) o.bp.push(r.bodyPaint); });
-    const plants = Object.values(byPlant).filter((o) => o.c > 0).map((o) => Object.assign(o, { a3: o.c3 / o.c, a38: o.c38 / o.c, a8: o.c8 / o.c, miss: (o.c - o.c3 - o.c38 - o.c8) / o.c, perCar: o.rev / o.c, bodyPaint: mean(o.bp) })).sort((a, b) => b.a8 - a.a8);
+    const plants = Object.values(byPlant).filter((o) => o.c > 0 && (S.cfg.excludedPlants || []).indexOf(o.plant) < 0).map((o) => Object.assign(o, { a3: o.c3 / o.c, a38: o.c38 / o.c, a8: o.c8 / o.c, miss: (o.c - o.c3 - o.c38 - o.c8) / o.c, perCar: o.rev / o.c, bodyPaint: mean(o.bp) })).sort((a, b) => b.a8 - a.a8);
     const people = current(D.people.SA).filter((p) => p.totalCars > 0);
     el.innerHTML = '<div class="page-head"><div><h1>車齡結構分析（服專）</h1><p>依 070 進廠日車齡：3年內／3–8年／8年以上 ÷ 總接車台數。</p></div></div>' +
       '<div class="banner info"><b>判讀原則</b><span>車齡結構僅作為服務複雜度與客群背景，<b>不得直接判定為績效好壞</b>。</span></div>' +
       '<div class="kpis">' + [['3年內', c3], ['3–8年', c38], ['8年以上', c8], ['車齡資料缺漏', cm]].map(([l, v]) => kpi({ label: l + '接車台數', value: v, unit: '台', cur: sh(v), curLabel: '占比', curFmt: F.pct, fmt: F.int, light: l === '車齡資料缺漏' ? (sh(v) > 0.1 ? 'yellow' : 'green') : 'blue', prev: null, prevLabel: '上期' })).join('') +
-      kpi({ label: '車齡資料完整度', value: tc ? (c3 + c38 + c8) / tc : null, fmt: F.pct, light: 'blue' }) + '</div>' +
+      kpi({ label: '車齡資料完整度', value: tc ? (c3 + c38 + c8) / tc : null, fmt: F.pct0, light: 'blue' }) + '</div>' +
       '<div class="grid g2" style="margin-top:12px">' +
       card('各服務廠車齡結構', '<div class="chart tall" id="a1"></div>', { sub: '依當月實際廠別；依8年以上占比排序' }) +
       card('各服專車齡結構', '<div class="chart tall" id="a2"></div>', { sub: '現行服專；依8年以上占比排序' }) +
@@ -300,7 +300,7 @@
     sc('#a3', 'perCar', '單車產值', F.money); sc('#a4', 'bodyPaint', '自費鈑噴達成', F.pct);
     const t = table(el.querySelector('#at'), {
       columns: [{ key: 'plant', label: '廠別' }, { key: 'name', label: '姓名', html: (p) => UI.nameLink(p) }, { key: 'license', label: '證照' }, { key: 'totalCars', label: '累積接車', num: true, fmt: F.int }, { key: 'cars3', label: '3年內台數', num: true, fmt: F.int }, { key: 'cars38', label: '3–8年台數', num: true, fmt: F.int }, { key: 'cars8', label: '8年以上台數', num: true, fmt: F.int }, { key: 'carsAgeMissing', label: '缺漏台數', num: true, fmt: F.int },
-        { key: 'age3', label: '3年內占比', num: true, fmt: F.pct }, { key: 'age38', label: '3–8年占比', num: true, fmt: F.pct }, { key: 'age8', label: '8年以上占比', num: true, fmt: F.pct }, { key: 'ageComplete', label: '車齡資料完整度', num: true, fmt: F.pct }, { key: 'perCar', label: '單車產值', num: true, fmt: F.money }, { key: 'bodyPaint', label: '自費鈑噴達成', num: true, fmt: F.pct }],
+        { key: 'age3', label: '3年內占比', num: true, fmt: F.pct }, { key: 'age38', label: '3–8年占比', num: true, fmt: F.pct }, { key: 'age8', label: '8年以上占比', num: true, fmt: F.pct }, { key: 'ageComplete', label: '車齡資料完整度', num: true, fmt: F.pct0 }, { key: 'perCar', label: '單車產值', num: true, fmt: F.money }, { key: 'bodyPaint', label: '自費鈑噴達成', num: true, fmt: F.pct2 }],
       rows: people, sortKey: 'age8', onRow: (p) => root.App.openPerson(p.id)
     });
     UI.bindExport(el, 'at', '服專車齡結構', t);
@@ -333,7 +333,7 @@
         xAxis: { type: 'category', data: dims.map((d) => d.label.replace('PR', '')), axisLabel: { fontSize: 10, interval: 0, rotate: 30 } }, yAxis: { type: 'category', data: plants, axisLabel: { fontSize: 10 } },
         visualMap: { min: 0, max: 100, show: false, inRange: { color: ['#c3002f', '#fde8ed', '#f8fafc', '#dbeafe', '#16294a'] } },
         series: [{ type: 'heatmap', data, label: { show: true, fontSize: 9 } }] });
-      const cols = [{ key: 'plant', label: '廠別' }, { key: 'name', label: '姓名', sticky: true, html: (p) => UI.nameLink(p) }, { key: 'license', label: '證照' }, { key: 'tenureGroup', label: '年資群' }, { key: 'completeness', label: '資料完整度', num: true, fmt: F.pct, cls: (p, v) => PX.colorCell('completeness', v) }]
+      const cols = [{ key: 'plant', label: '廠別' }, { key: 'name', label: '姓名', sticky: true, html: (p) => UI.nameLink(p) }, { key: 'license', label: '證照' }, { key: 'tenureGroup', label: '年資群' }, { key: 'completeness', label: '資料完整度', num: true, fmt: F.pct0, cls: (p, v) => PX.colorCell('completeness', v) }]
         .concat(dims.map((d) => ({ key: d.prKey, label: d.label + '（' + Math.round(S.cfg.weights[role][d.key] * 100) + '%）', num: true, fmt: F.pr, cls: (p, v) => PX.colorCell('pr', v) })))
         .concat([{ key: 'power', label: '綜合戰力', num: true, fmt: F.score, cls: (p, v) => PX.colorCell('power', v) }, { key: 'rank', label: '排名', num: true }, { key: 'prLicense', label: '同證照PR', num: true, fmt: F.pr }, { key: 'prTenure', label: '同年資PR', num: true, fmt: F.pr }, { key: 'licenseGap', label: '證照戰力落差', num: true, fmt: F.signed1, cls: (p, v) => PX.colorCell('licenseGap', v) }, { key: 'powerBand', label: '戰力區間', html: (p, v) => UI.pill(v, v === '高戰力' ? 'green' : v === '中戰力' ? 'blue' : v === '低戰力' ? 'red' : 'gray') },
           { key: 'excelPower', label: 'Excel戰力', num: true, get: (p) => p.excel.power, fmt: F.score }]);

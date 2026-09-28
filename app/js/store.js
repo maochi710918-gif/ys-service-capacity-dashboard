@@ -42,9 +42,9 @@
   }
   function loadConfig() {
     const over = lsGet(LS.cfg);
-    S.cfg = deepMerge(defaultConfig(), over ? { weights: over.weights, thresholds: over.thresholds } : {});
+    S.cfg = deepMerge(defaultConfig(), over ? { weights: over.weights, thresholds: over.thresholds, capacity: over.capacity } : {});
   }
-  function saveConfig(cfg) { lsSet(LS.cfg, { weights: cfg.weights, thresholds: cfg.thresholds }); S.cfg = cfg; S.cache = {}; }
+  function saveConfig(cfg) { lsSet(LS.cfg, { weights: cfg.weights, thresholds: cfg.thresholds, capacity: cfg.capacity }); S.cfg = cfg; S.cache = {}; }
   function resetConfig() { lsDel(LS.cfg); loadConfig(); S.cache = {}; }
   function init() {
     loadModel(); loadConfig();
@@ -106,7 +106,7 @@
 
   /* ---------- 人員（依期間重算，快取） ---------- */
   function peopleFor(months) {
-    const key = months.join(',') + '|' + JSON.stringify(S.cfg.weights) + JSON.stringify(S.cfg.thresholds);
+    const key = months.join(',') + '|' + JSON.stringify(S.cfg.weights) + JSON.stringify(S.cfg.thresholds) + JSON.stringify(S.cfg.capacity);
     if (!S.cache[key]) S.cache[key] = E.buildPeople(S.model, S.cfg, months);
     return S.cache[key];
   }
@@ -199,6 +199,8 @@
     const push = (n) => { if (n && !seen[n]) { seen[n] = 1; names.push(n); } };
     (S.model.plants || []).forEach((r) => push(r.plant));
     D.P.SA.concat(D.P.CA).forEach((p) => push(p.plant));
+    const EX = S.cfg.excludedPlants || [];
+    for (let i = names.length - 1; i >= 0; i--) if (EX.indexOf(names[i]) >= 0) names.splice(i, 1);
     const T = S.cfg.thresholds;
     const cur = (role, plant) => D.people[role].filter((p) => p.status === '現行' && p.plant === plant);
     const rows = names.filter((n) => opt.all || ((!S.filters.plant || n === S.filters.plant) && (perm().scope !== 'plant' || !S.user.plant || n === S.user.plant))).map((n) => {
@@ -208,7 +210,7 @@
         plant: n,
         saCount: useRoster && nn(ro.saCount) ? ro.saCount : sa.length,
         caCount: useRoster && nn(ro.caCount) ? ro.caCount : ca.length,
-        saAvgCars: mean(sa.map((p) => p.avgCars)), saAvgRevenue: mean(sa.map((p) => p.avgRevenue)), saPerCar: mean(sa.map((p) => p.perCar)),
+        saAvgCars: mean(sa.map((p) => p.avgCars)), capacityRate: mean(sa.map((p) => p.capacityRate)), saAvgRevenue: mean(sa.map((p) => p.avgRevenue)), saPerCar: mean(sa.map((p) => p.perCar)),
         app: mean(sa.map((p) => p.app)), saCsi: mean(sa.map((p) => p.csi)), saPower: mean(sa.map((p) => p.power)),
         caAvgOrders: mean(ca.map((p) => p.avgOrders)), esign: mean(ca.map((p) => p.esign)), caCsi: mean(ca.map((p) => p.csi)), caPower: mean(ca.map((p) => p.power)),
         high: sa.concat(ca).filter((p) => nn(p.power) && p.power >= T.highPower).length,
@@ -244,7 +246,7 @@
   function options(P) {
     const all = P.SA.concat(P.CA);
     const uniq = (f) => Array.from(new Set(all.map(f).filter((v) => nn(v) && v !== ''))).sort((a, b) => String(a).localeCompare(String(b), 'zh-Hant'));
-    const plants = Array.from(new Set((S.model.plants || []).map((r) => r.plant).concat(all.map((p) => p.plant)))).filter(Boolean);
+    const plants = Array.from(new Set((S.model.plants || []).map((r) => r.plant).concat(all.map((p) => p.plant)))).filter((p) => p && (S.cfg.excludedPlants || []).indexOf(p) < 0);
     return {
       plants, licenses: uniq((p) => p.license), positions: uniq((p) => p.position), statuses: uniq((p) => p.status),
       promos: uniq((p) => p.promotion), talents: S.cfg.grid.maturities.flatMap((m) => S.cfg.grid.types[m]).concat(['資料不足']),
@@ -305,6 +307,9 @@
     const roster = S.model.plants || [];
     const caRoster = sum(roster.map((r) => r.caCount || 0)), caData = P.CA.filter((p) => p.status === '現行').length;
     if (caRoster !== caData) sys.push({ id: 'sys-ca-roster', src: '系統自動檢核', level: '提醒', item: '115.9名冊出納 ' + caRoster + ' 人，出納總覽現行 ' + caData + ' 人', finding: roster.filter((r) => (r.caCount || 0) > P.CA.filter((p) => p.status === '現行' && p.plant === r.plant).length).map((r) => r.plant + ' 名冊 ' + r.caCount + ' 人／有資料 ' + P.CA.filter((p) => p.status === '現行' && p.plant === r.plant).length + ' 人').join('；'), handling: '人數依名冊；個人量能、PR 與戰力僅計有資料者，缺資料者不以0分計算。', months: allMonths(), roles: ['出納'], people: [], done: true, updated: stamp });
+    const ex = S.cfg.excludedPlants || [];
+    const exRows = S.model.saMonthly.concat(S.model.caMonthly).filter((r) => ex.indexOf(r.actualPlant) >= 0);
+    sys.push({ id: 'sys-excluded', src: '系統設定', level: '提醒', item: '排除於服務廠管理指標：' + ex.join('、'), finding: '月度原始資料中含 ' + exRows.length + ' 筆屬上述據點（' + Array.from(new Set(exRows.map((r) => r.name))).join('、') + '）。', handling: '不顯示於儀表板、不納入服務廠排名／平均／圖表／總廠數；原始資料保留於資料層供稽核。全公司合計（接車、業績、結帳）仍含全部原始列以與 Excel 管理總覽一致。', months: Array.from(new Set(exRows.map((r) => r.month))).sort(), roles: Array.from(new Set(exRows.map((r) => r.role === 'SA' ? '服專' : '出納'))), people: Array.from(new Set(exRows.map((r) => r.name))), done: true, updated: stamp });
     const noScore = allPeople.filter((p) => p.status === '現行' && !nn(p.power));
     if (noScore.length) sys.push({ id: 'sys-noscore', src: '系統自動檢核', level: '提醒', item: '現行人員資料不足未計綜合戰力（' + noScore.length + '人）', finding: '資料完整度低於 ' + Math.round(S.cfg.thresholds.scoreMinCompleteness * 100) + '% 或無有效月份。', handling: '顯示「資料不足」，不以0分計算、不列入排名與九宮格。', months: allMonths(), roles: Array.from(new Set(noScore.map((p) => p.role === 'SA' ? '服專' : '出納'))), people: noScore.map((p) => p.name), done: true, updated: stamp });
     const last = allMonths().slice(-1)[0];

@@ -185,6 +185,16 @@
     return people;
   }
 
+  /* 接車量能達成率＝接車台數 ÷（工作日 × 標準台數／日）；任一有接車月份缺工作日 → null */
+  function capacityRate(rows, months, cfg) {
+    const cap = cfg.capacity || {}, wd = cap.workdays || {};
+    const rs = rows.filter((r) => months.indexOf(r.month) >= 0 && nn(r.cars));
+    if (!rs.length || !cap.perDay) return null;
+    if (rs.some((r) => !(wd[r.month] > 0))) return null;
+    const std = sum(rs.map((r) => wd[r.month] * cap.perDay));
+    return std ? sum(rs.map((r) => r.cars)) / std : null;
+  }
+
   /* ---------------- 建立全部人員（依期間重算） ---------------- */
   const STATIC_KEYS = ['plant', 'name', 'license', 'years', 'status', 'position', 'advice'];
   function buildPeople(model, cfg, months) {
@@ -197,6 +207,7 @@
         STATIC_KEYS.forEach((k) => { p[k] = b[k]; });
         p.monthly = (byName[b.name] || []).slice().sort((a, c) => (a.month < c.month ? -1 : 1));
         Object.assign(p, aggregate(role, p.monthly, months));
+        if (role === 'SA') p.capacityRate = capacityRate(p.monthly, months, cfg);
         const hist = p.monthly.filter((r) => r.actualPlant && r.actualPlant !== p.plant).map((r) => r.month + ' ' + r.actualPlant);
         p.plantHistory = hist;
         return p;

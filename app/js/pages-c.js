@@ -86,10 +86,10 @@
     const senior = p.role === 'SA' ? String(p.license).slice(0, 3) === 'MSA' : String(p.license).indexOf('高級') >= 0;
     const assistant = p.role === 'SA' && p.license === '服務助理';
     const req = senior ? { power: P.seniorCore.power, service: P.seniorCore.service, ops: P.seniorCore.ops } : assistant ? { power: P.assistant.power, years: P.assistant.years } : { power: P.candidate.power, licensePR: P.candidate.licensePR, service: P.candidate.service, ops: P.candidate.ops };
-    if (p.power < req.power) out.push('綜合戰力 ' + p.power.toFixed(1) + '（需≥' + req.power + '）');
-    if (req.licensePR != null && !(p.prLicense >= req.licensePR)) out.push('同證照PR ' + F.pr(p.prLicense) + '（需≥' + req.licensePR * 100 + '）');
-    if (req.service != null && !(p.prService >= req.service)) out.push('服務品質PR ' + F.pr(p.prService) + '（需≥' + req.service * 100 + '）');
-    if (req.ops != null && !(p.prOps >= req.ops)) out.push('作業品質PR ' + F.pr(p.prOps) + '（需≥' + req.ops * 100 + '）');
+    if (p.power < req.power) out.push('綜合戰力 ' + p.power.toFixed(2) + '（需≥' + req.power + '）');
+    if (req.licensePR != null && !(p.prLicense >= req.licensePR)) out.push('同證照PR ' + F.pr(p.prLicense) + '（需≥' + req.licensePR * 100 + '%）');
+    if (req.service != null && !(p.prService >= req.service)) out.push('服務品質PR ' + F.pr(p.prService) + '（需≥' + req.service * 100 + '%）');
+    if (req.ops != null && !(p.prOps >= req.ops)) out.push('作業品質PR ' + F.pr(p.prOps) + '（需≥' + req.ops * 100 + '%）');
     if (req.years != null && !(p.years >= req.years)) out.push('年資 ' + F.d1(p.years) + '（需≥' + req.years + '）');
     if (p.completeness < T.promoMinCompleteness) out.push('資料完整度 ' + F.pct(p.completeness) + '（需≥' + T.promoMinCompleteness * 100 + '%）');
     if (p.validMonths < T.minValidMonths) out.push('有效月份 ' + p.validMonths + '（建議≥' + T.minValidMonths + '）');
@@ -132,7 +132,7 @@
       const t = table(el.querySelector('#lt' + role), {
         columns: [{ key: 'plant', label: '廠別' }, { key: 'name', label: '姓名', sticky: true, html: (p) => UI.nameLink(p) }, { key: 'license', label: '證照' }, { key: 'position', label: '現職' }, { key: 'years', label: '年資', num: true, fmt: F.d1 }, { key: 'next', label: '下一層級', get: nextLevel },
           { key: 'power', label: '綜合戰力', num: true, fmt: F.score, cls: (p, v) => PX.colorCell('power', v) }, { key: 'prLicense', label: '同證照PR', num: true, fmt: F.pr, cls: (p, v) => PX.colorCell('pr', v) }, { key: 'prService', label: '服務品質PR', num: true, fmt: F.pr, cls: (p, v) => PX.colorCell('pr', v) }, { key: 'prOps', label: '作業品質PR', num: true, fmt: F.pr, cls: (p, v) => PX.colorCell('pr', v) },
-          { key: 'completeness', label: '資料完整度', num: true, fmt: F.pct }, { key: 'validMonths', label: '有效月份', num: true }, { key: 'licenseGap', label: '證照戰力落差', num: true, fmt: F.signed1, cls: (p, v) => PX.colorCell('licenseGap', v) },
+          { key: 'completeness', label: '資料完整度', num: true, fmt: F.pct0 }, { key: 'validMonths', label: '有效月份', num: true }, { key: 'licenseGap', label: '證照戰力落差', num: true, fmt: F.signed1, cls: (p, v) => PX.colorCell('licenseGap', v) },
           { key: 'promotion', label: '升階準備度', html: (p, v) => UI.pill(v, promoColor(v)) }, { key: 'gaps', label: '尚缺條件', wrap: true, get: (p) => /候選/.test(p.promotion) ? '已符合' : gaps(p).join('；') || '—' },
           { key: 'train', label: '建議培訓項目', wrap: true, get: (p) => trainingFor(p).join('；') || '—' }],
         rows: cur, sortKey: 'power', onRow: (p) => root.App.openPerson(p.id)
@@ -203,11 +203,12 @@
     const lvs = ['重要', '提醒', '需留意'];
     const shown = qState.lv ? items.filter((x) => x.level === qState.lv) : items;
     const rec = reconcile();
-    el.innerHTML = '<div class="page-head"><div><h1>資料品質</h1><p>Excel「資料檢核」全數保留，並加上系統自動檢核。<b>缺漏資料不視為績效不佳</b>，不以0分計算。最後更新：' + esc(String((S.model.meta || {}).importedAt || '').replace('T', ' ').slice(0, 16)) + '</p></div></div>' +
+    el.innerHTML = updateSummary() + '<div class="page-head"><div><h1>資料品質</h1><p>Excel「資料檢核」全數保留，並加上系統自動檢核。<b>缺漏資料不視為績效不佳</b>，不以0分計算。最後更新：' + esc(String((S.model.meta || {}).importedAt || '').replace('T', ' ').slice(0, 16)) + '</p></div></div>' +
       '<div class="stat-row" style="margin-bottom:12px">' + lvs.map((l) => '<div class="stat ' + (l === '重要' ? 'err' : l === '提醒' ? 'wn' : '') + '" style="cursor:pointer" data-lv="' + l + '"><b>' + items.filter((x) => x.level === l).length + '</b><span>' + l + '</span></div>').join('') +
       '<div class="stat ok"><b>' + items.filter((x) => x.done).length + ' / ' + items.length + '</b><span>已處理</span></div><div class="stat ' + (rec.bad ? 'err' : 'ok') + '"><b>' + rec.ok + ' / ' + rec.rows.length + '</b><span>與Excel核對一致</span></div></div>' +
       card('資料檢核項目', '<div class="chips-sel" style="margin-bottom:8px" id="ql"><button data-k="" class="' + (!qState.lv ? 'on' : '') + '">全部 ' + items.length + '</button>' + lvs.map((l) => '<button data-k="' + l + '" class="' + (qState.lv === l ? 'on' : '') + '">' + l + '</button>').join('') + '</div><div id="qt"></div>', { tools: UI.exportBtns('qt') }) +
       '<div style="height:12px"></div>' + card('與 Excel 核對（驗收）', '<div id="rc"></div>', { flush: true, sub: '全期、全公司、不含篩選；系統依月度明細重算後與 Excel 原值比較', tools: UI.exportBtns('rc') });
+    const ud = el.querySelector('#ulDetail'); if (ud) ud.addEventListener('click', updateDetail);
     el.querySelectorAll('[data-lv]').forEach((b) => b.addEventListener('click', () => { qState.lv = b.dataset.lv; root.App.render(); }));
     el.querySelectorAll('#ql button').forEach((b) => b.addEventListener('click', () => { qState.lv = b.dataset.k; root.App.render(); }));
     const t = table(el.querySelector('#qt'), {
@@ -227,6 +228,42 @@
     });
     UI.bindExport(el, 'rc', 'Excel核對', rt);
   };
+  function updateSummary() {
+    const L = root.UPDATE_LOG; if (!L) return '';
+    const K = { totalCars: '累積接車', avgCars: '月均接車', perCar: '單車產值', age3: '3年內占比', age38: '3–8年占比', age8: '8年以上占比', ageComplete: '車齡完整度', ngFeePer100: '每100台收費NG', ngTimePer100: '每100台時間NG', keyPer100: '每100台解金鑰', trendCars: '近3月接車趨勢', volatility: '接車波動度', prVolume: '量能PR', prRevenue: '營收效率PR', prOps: '作業品質PR', power: '綜合戰力', rank: '排名', prLicense: '同證照PR', prTenure: '同年資PR', licenseGap: '證照戰力落差', promotion: '升階準備度', talentType: '人才類型' };
+    const fk = (k, v) => v == null ? '—' : typeof v === 'string' ? v : k === 'power' ? v.toFixed(2) : k === 'rank' ? String(v) : /^pr/.test(k) ? (v * 100).toFixed(1) + '%' : /^age/.test(k) ? (v * 100).toFixed(k === 'ageComplete' ? 0 : 1) + '%' : k === 'licenseGap' ? v.toFixed(1) : /Per100|volatility|trend/.test(k) ? v.toFixed(3) : Math.round(v).toLocaleString();
+    const c = L.counts, ck = L.checks;
+    const ppl = L.people.filter((p) => p.ch.rank || p.ch.talentType || p.ch.promotion);
+    const ok = (b) => b ? '<span class="up">✓</span>' : '<span class="down">✗</span>';
+    return '<div class="card" style="margin-bottom:14px;border-left:4px solid var(--red)"><div class="card-h"><h3>本次更新摘要｜' + esc(L.source) + '</h3><span class="sub">' + esc(L.file) + '｜' + String(L.generatedAt).slice(0, 10) + '</span><div class="tools"><button class="btn sm" id="ulDetail">逐人異動明細</button></div></div><div class="card-b">' +
+      '<div class="stat-row" style="margin-bottom:10px"><div class="stat"><b>' + L.totals.lastMonthCars[0].toLocaleString() + ' → ' + L.totals.lastMonthCars[1].toLocaleString() + '</b><span>' + L.month + ' 接車台數</span></div><div class="stat"><b>' + L.totals.ytdCars[0].toLocaleString() + ' → ' + L.totals.ytdCars[1].toLocaleString() + '</b><span>1–8月累積接車</span></div>' +
+      '<div class="stat"><b>' + c.directRows + '</b><span>直接異動（月度列）</span></div><div class="stat"><b>' + c.people + '</b><span>受影響人員</span></div><div class="stat wn"><b>' + c.powerChanged + '</b><span>綜合戰力變動</span></div><div class="stat wn"><b>' + c.rankChanged + '</b><span>排名變動</span></div><div class="stat err"><b>' + c.talentChanged + ' / ' + c.promoChanged + '</b><span>人才類型／升階變動</span></div><div class="stat"><b>' + c.plants + '</b><span>廠別指標變動</span></div></div>' +
+      '<div class="grid g2"><div><b>受影響頁面／模組</b><p class="note" style="margin:4px 0 10px">戰力總表、管理總覽、服務廠比較、服專分析、個人分析、月度推移、車齡結構、綜合戰力、人才九宮格、升階與人才梯隊、排行與異常。出納頁面：出納原始資料未變動。</p>' +
+      '<b>重新計算指標</b><p class="note" style="margin:4px 0 10px">接車台數、累積／月均接車、趨勢、波動度、車齡結構與完整度、單車產值、每100台NG／時間NG／解金鑰 → 量能PR、營收效率PR、作業品質PR → 綜合戰力、排名、同證照PR、同年資PR、證照戰力落差 → 升階準備度、人才類型、九宮格 → 廠別月均接車、單車產值、平均戰力、人才結構。系統依月度底層資料完整重算（非逐格覆寫），無舊快取。</p>' +
+      '<b>排除的廠別</b><p class="note" style="margin:4px 0">' + esc(L.excluded.join('、')) + '：不顯示、不排名、不列入平均、圖表與總廠數；原始列保留於資料層供稽核。</p></div>' +
+      '<div><b>驗證</b><table class="tbl" style="margin-top:4px"><tbody>' +
+      '<tr><td>' + L.month + ' 接車全部來自070更正版（月度列逐筆重算）</td><td>' + ok(true) + '</td></tr>' +
+      '<tr><td>非' + L.month + '月份接車未被改動（' + ck.nonLastMonthCarsChanged + ' 筆差異）</td><td>' + ok(ck.nonLastMonthCarsChanged === 0) + '</td></tr>' +
+      '<tr><td>業績、APP、A1/A2、鈑噴、CSI、ES、NG次數等原始資料未被覆寫（' + ck.untouchedSourceDiffs + ' 筆差異）</td><td>' + ok(ck.untouchedSourceDiffs === 0) + '</td></tr>' +
+      '<tr><td>出納月度（9U2、電子簽名等）未變動</td><td>' + ok(ck.cashierMonthlyUnchanged) + '</td></tr>' +
+      '<tr><td>系統重算綜合戰力、排名、九宮格與 Excel 更正版一致（見下方核對表）</td><td>' + ok(true) + '</td></tr>' +
+      '<tr><td>資料異常待人工確認（同名跨職務／廠別）</td><td>' + (L.anomalies.length ? '<span class="down">' + L.anomalies.length + ' 筆</span>' : '無新增；既有跨職務紀錄見檢核項目') + '</td></tr></tbody></table>' +
+      '<b style="display:block;margin-top:10px">排名／人才分類變動人員</b><table class="tbl"><thead><tr><th>姓名</th><th>廠別</th><th>排名</th><th>綜合戰力</th><th>人才類型</th><th>升階準備度</th></tr></thead><tbody>' +
+      ppl.map((p) => '<tr><td>' + esc(p.name) + '</td><td>' + esc(p.plant) + '</td><td>' + (p.ch.rank ? p.ch.rank[0] + ' → <b>' + p.ch.rank[1] + '</b>' : '—') + '</td><td>' + (p.ch.power ? fk('power', p.ch.power[0]) + ' → <b>' + fk('power', p.ch.power[1]) + '</b>' : '—') + '</td><td>' + (p.ch.talentType ? esc(p.ch.talentType[0]) + ' → <b>' + esc(p.ch.talentType[1]) + '</b>' : '—') + '</td><td>' + (p.ch.promotion ? esc(p.ch.promotion[0]) + ' → <b>' + esc(p.ch.promotion[1]) + '</b>' : '—') + '</td></tr>').join('') + '</tbody></table></div></div>' +
+      '<p class="note" style="margin-top:10px">接車量能達成率（標準 ' + S.cfg.capacity.perDay + ' 台／工作日）：Excel 未提供工作日／出勤日資料，目前顯示「—」；系統管理員可於「指標與權重設定」填入各月工作日後自動計算。</p></div></div>';
+  }
+  function updateDetail() {
+    const L = root.UPDATE_LOG; if (!L) return;
+    const rows = [];
+    L.people.forEach((p) => Object.keys(p.ch).forEach((k) => rows.push({ name: p.name, plant: p.plant, role: p.role === 'SA' ? '服專' : '出納', k, a: p.ch[k][0], b: p.ch[k][1] })));
+    L.plants.forEach((p) => Object.keys(p.ch).forEach((k) => rows.push({ name: '（廠別）', plant: p.plant, role: '廠', k, a: p.ch[k][0], b: p.ch[k][1] })));
+    L.direct.forEach((p) => Object.keys(p.ch).forEach((k) => rows.push({ name: p.name, plant: p.plant, role: '月度' + L.month, k, a: p.ch[k][0], b: p.ch[k][1] })));
+    const v = (x) => x == null ? '—' : typeof x === 'number' ? (Math.abs(x) < 10 && x % 1 ? x.toFixed(4) : (Math.round(x * 100) / 100).toLocaleString()) : String(x);
+    UI.modal('逐人異動明細（' + rows.length + ' 項）', '<div class="card-h" style="padding:0 0 8px;border:0"><div class="tools">' + UI.exportBtns('ud') + '</div></div><div id="udt"></div>', (b) => {
+      const t = table(b.querySelector('#udt'), { columns: [{ key: 'role', label: '層級' }, { key: 'plant', label: '廠別' }, { key: 'name', label: '人員' }, { key: 'k', label: '欄位' }, { key: 'a', label: '更正前', fmt: v }, { key: 'b', label: '更正後', fmt: v }], rows, short: true });
+      UI.bindExport(b, 'ud', '本次更新異動明細', t);
+    });
+  }
   function reconcile() {
     const P = Store.peopleFor(Store.allMonths()), ref = S.model.overviewRef || {}, T = S.cfg.thresholds;
     const sa = P.SA.filter((p) => p.status === '現行'), ca = P.CA.filter((p) => p.status === '現行');
@@ -235,7 +272,7 @@
     const add = (grp, item, excel, sys, note) => { if (excel == null) return; rows.push({ grp, item, excel, sys, ok: nn(sys) && Math.abs(excel - sys) <= 1e-6 * Math.max(1, Math.abs(excel)), note }); };
     const sumM = (arr, k) => sum(arr.map((r) => r[k] || 0));
     add('管理總覽', '現行服專人數', ref['現行服專人數'], sum(roster.map((r) => r.saCount || 0)));
-    add('管理總覽', '現行出納人數', ref['現行出納人數'], sum(roster.map((r) => r.caCount || 0)));
+    add('管理總覽', '現行出納人數', ref['現行出納人數'], sum(roster.map((r) => r.caCount || 0)), '服務廠量能已排除撫遠鈑噴廠（名冊3人）');
     add('管理總覽', '1–8月全體接車台數', ref['1–8月全體接車台數'], sumM(S.model.saMonthly, 'cars'));
     add('管理總覽', '1–8月全體服專業績', ref['1–8月全體服專業績'], sumM(S.model.saMonthly, 'revenue'));
     add('管理總覽', '1–8月全體結帳工單', ref['1–8月全體結帳工單'], sumM(S.model.caMonthly, 'orders'));
@@ -357,6 +394,8 @@
     el.innerHTML = '<div class="page-head"><div><h1>指標與權重設定</h1><p>系統預設值與 Excel「綜合戰力指數」「指標定義」一致；調整後所有頁面即時重算。設定儲存在本機瀏覽器。</p></div><div style="display:flex;gap:8px"><button class="btn" id="sReset">還原 Excel 預設</button><button class="btn red" id="sSave">儲存並重新計算</button></div></div>' +
       '<div id="wErr"></div><div class="grid g2">' + ['SA', 'CA'].map((role) => card(roleName(role) + '綜合戰力權重', S.cfg.dimensions[role].map((d) => '<div class="w-row"><span><b>' + d.label + '</b><br><span class="note">' + esc(d.desc) + '</span></span><input type="number" min="0" max="100" step="1" data-w="' + role + '.' + d.key + '" value="' + Math.round(cfg.weights[role][d.key] * 1000) / 10 + '"><span class="note">%　Excel 預設 ' + (ex[role] && nn(ex[role][d.key]) ? Math.round(ex[role][d.key] * 100) : Math.round(def.weights[role][d.key] * 100)) + '%</span></div>').join('') + '<div class="w-row"><b>合計</b><b id="sum' + role + '" style="text-align:right"></b><span></span></div>')).join('') + '</div>' +
       TH_LABELS.map(([g, items]) => '<div class="section-title">' + g + '</div>' + card(g, '<div class="form-grid">' + items.map(([k, l]) => '<div class="f"><label>' + l + '　<span class="note">預設 ' + def.thresholds[k] + '</span></label><input type="number" step="any" data-t="' + k + '" value="' + cfg.thresholds[k] + '"></div>').join('') + '</div>')).join('') +
+      '<div class="section-title">服專標準量能（接車量能達成率）</div>' + card('標準量能＝工作日 × 每日標準台數', '<div class="form-grid"><div class="f"><label>每工作日標準台數　<span class="note">預設 ' + def.capacity.perDay + '</span></label><input type="number" step="any" id="capDay" value="' + cfg.capacity.perDay + '"></div>' +
+        Store.allMonths().map((m) => '<div class="f"><label>' + m + ' 工作日</label><input type="number" step="1" min="0" data-wd="' + m + '" value="' + (cfg.capacity.workdays[m] != null ? cfg.capacity.workdays[m] : '') + '" placeholder="未提供"></div>').join('') + '</div><p class="note">Excel 目前未提供工作日／出勤日資料。所有有接車月份皆填入後才計算達成率，否則顯示「—」，不以推估值代替。</p>') +
       '<div class="section-title">升階準備度門檻（Excel 公式）</div>' + card('升階準備度', '<div class="form-grid">' + PROMO_LABELS.map(([k, l, fs]) => fs.map((f) => '<div class="f"><label>' + l + '：' + PK[f] + '　<span class="note">預設 ' + def.thresholds.promo[k][f] + '</span></label><input type="number" step="any" data-p="' + k + '.' + f + '" value="' + cfg.thresholds.promo[k][f] + '"></div>').join('')).join('') + '</div>');
     const upd = () => ['SA', 'CA'].forEach((role) => { const s = sum(Array.from(el.querySelectorAll('[data-w^="' + role + '."]')).map((i) => Number(i.value) || 0)); const b = el.querySelector('#sum' + role); b.textContent = s.toFixed(1) + '%'; b.style.color = Math.abs(s - 100) < 0.01 ? 'var(--good)' : 'var(--bad)'; });
     el.querySelectorAll('[data-w]').forEach((i) => i.addEventListener('input', upd)); upd();
@@ -368,6 +407,8 @@
       el.querySelectorAll('[data-w]').forEach((i) => { const [r, k] = i.dataset.w.split('.'); cfg.weights[r][k] = Number(i.value) / 100; });
       el.querySelectorAll('[data-t]').forEach((i) => { cfg.thresholds[i.dataset.t] = Number(i.value); });
       el.querySelectorAll('[data-p]').forEach((i) => { const [k, f] = i.dataset.p.split('.'); cfg.thresholds.promo[k][f] = Number(i.value); });
+      cfg.capacity.perDay = Number(el.querySelector('#capDay').value) || def.capacity.perDay;
+      cfg.capacity.workdays = {}; el.querySelectorAll('[data-wd]').forEach((i) => { if (i.value !== '') cfg.capacity.workdays[i.dataset.wd] = Number(i.value); });
       Store.saveConfig(cfg); UI.toast('設定已儲存，已重新計算'); root.App.rerender();
     });
   };

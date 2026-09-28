@@ -138,7 +138,7 @@
         columns: [{ key: '_all', label: '全排名', num: true, html: (p) => '<b>' + medal(p._all) + '</b>', sortVal: (p) => p._all }, { key: 'rank', label: '職務內排名', num: true, html: (p) => p.rank + ' / ' + (p.role === 'SA' ? saAll : caAll).length, sortVal: (p) => p.rank },
           { key: 'name', label: '姓名', sticky: true, html: (p) => UI.nameLink(p) }, { key: 'role', label: '角色', get: (p) => roleName(p.role) }, { key: 'plant', label: '服務廠' }, { key: 'license', label: '證照' },
           { key: 'power', label: '綜合戰力', html: (p) => bar(p.power, 100, powColor(p.power)), sortVal: (p) => p.power }, { key: 'talentType', label: '人才類型', html: (p, v) => UI.pill(v, TALENT_COLOR[v]) },
-          { key: 'vol', label: '月均量能', num: true, get: (p) => p.role === 'SA' ? p.avgCars : p.avgOrders, html: (p) => F.d1(p.role === 'SA' ? p.avgCars : p.avgOrders) + '<small class="note"> ' + (p.role === 'SA' ? '台' : '張') + '</small>' },
+          { key: 'vol', label: '月均量能', num: true, get: (p) => p.role === 'SA' ? p.avgCars : p.avgOrders, html: (p) => F.int(p.role === 'SA' ? p.avgCars : p.avgOrders) + '<small class="note"> ' + (p.role === 'SA' ? '台' : '張') + '</small>' },
           { key: 'cs', label: '顧客整體（份）', num: true, get: (p) => csiOf[p.id] && csiOf[p.id].n ? csiOf[p.id].o : null, html: (p) => { const c = csiOf[p.id]; return c && c.n ? f2(c.o) + '<small class="note">（' + c.n + '）</small>' : '—'; }, cls: (p, v) => csiCls(v) },
           { key: 'sw', label: '強項／短板', get: (p) => { const x = strongWeak(p); return x.s + '／' + x.w; }, html: (p) => { const x = strongWeak(p); return '<span class="up">▲' + x.s + '</span>　<span class="down">▼' + x.w + '</span>'; } }],
         rows: l, sortKey: '_all', sortDir: 1, onRow: (p) => root.App.openPerson(p.id)
@@ -171,7 +171,7 @@
     const t3 = table(el.querySelector('#bt3'), {
       columns: [{ key: 'plant', label: '服務廠', get: (c) => c.p.plant }, { key: 'name', label: '出納', get: (c) => c.p.name, html: (c) => UI.nameLink(c.p) }, { key: 'license', label: '證照', get: (c) => c.p.license },
         { key: 'orders', label: '結帳工單', num: true, fmt: F.int }, { key: 'share', label: '占廠結帳比', html: (c) => bar(nn(c.share) ? c.share * 100 : null, 100, 'var(--navy-700)', F.pct(c.share)), sortVal: (c) => c.share },
-        { key: 'avg', label: '月均結帳', num: true, fmt: F.d1 }, { key: 'ratio', label: '1出納對應服專', num: true, fmt: (v) => nn(v) ? v.toFixed(1) + ' 人' : '—' }, { key: 'esign', label: '電子簽名', num: true, fmt: F.pct }, { key: 'card', label: '感心卡', num: true, fmt: F.d2 },
+        { key: 'avg', label: '月均結帳', num: true, fmt: F.int }, { key: 'ratio', label: '1出納對應服專', num: true, fmt: (v) => nn(v) ? v.toFixed(1) + ' 人' : '—' }, { key: 'esign', label: '電子簽名', num: true, fmt: F.pct }, { key: 'card', label: '感心卡', num: true, fmt: F.d2 },
         { key: 'power', label: '出納戰力', num: true, fmt: F.score, cls: (c, v) => PX.colorCell('power', v) }, { key: 'csiK', label: '所屬廠結帳服務滿意', num: true, fmt: f2, cls: (c, v) => csiCls(v) }, { key: 'lkRate', label: '結帳未滿分率', num: true, fmt: F.pct }],
       rows: cashiers, sortKey: 'orders', short: true, onRow: (c) => root.App.openPerson(c.p.id)
     });

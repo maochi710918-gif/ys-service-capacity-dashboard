@@ -11,7 +11,10 @@
   const MONEY = ['totalRevenue', 'avgRevenue', 'perCar', 'revenue'];
   const INT = ['totalCars', 'totalOrders', 'ngFee', 'ngTime', 'keyUnlock', 'validMonths', 'rank', 'cars', 'orders', 'cars3', 'cars38', 'cars8'];
   const CSI = ['csi', 'csiFirst', 'esSelf'];
+  const PCT0 = ['completeness', 'ageComplete'], PCT2 = ['app', 'a1', 'a2', 'bodyPaint', 'capacityRate'];
   function fmtOf(k) {
+    if (PCT0.indexOf(k) >= 0) return F.pct0;
+    if (PCT2.indexOf(k) >= 0) return F.pct2;
     if (PCT.indexOf(k) >= 0) return F.pct;
     if (MONEY.indexOf(k) >= 0) return F.money;
     if (INT.indexOf(k) >= 0) return F.int;
@@ -20,7 +23,8 @@
     if (k === 'power') return F.score;
     if (k === 'licenseGap' || k === 'trendCsi') return F.signed1;
     if (/Per100$/.test(k)) return F.d2;
-    if (k === 'avgCars' || k === 'avgOrders' || k === 'years') return F.d1;
+    if (k === 'avgCars' || k === 'avgOrders') return F.int;
+    if (k === 'years') return F.d1;
     if (k === 'card') return F.d2;
     return F.text;
   }
@@ -145,7 +149,7 @@
     const compMonth = (m) => { if (!m) return null; let c = 0, n = 0; roles.forEach((r) => { const Fd = APP_CONFIG.COMPLETENESS_FIELDS[r]; D.monthlyAllMonths[r].filter((x) => x.month === m && x.status === '現行').forEach((x) => { Fd.forEach((f) => { n++; if (nn(x[f])) c++; }); }); }); return n ? c / n : null; };
     const pm = Store.allMonths()[Store.allMonths().indexOf(lastM) - 1];
     const cv = comp(scopeCur);
-    push(null, { label: '資料完整度', value: cv, fmt: F.pct, cur: compMonth(lastM), prev: compMonth(pm), curLabel: lastM.slice(5) + '月欄位', prevLabel: pm ? pm.slice(5) + '月欄位' : '上期', company: comp(roles.flatMap((r) => current(CO.people[r]))), light: !nn(cv) ? 'gray' : cv >= T.completenessGreen ? 'green' : cv >= T.completenessYellow ? 'yellow' : 'red', hint: '現行人員有值欄位 ÷ 應有欄位（僅計有效月份）' });
+    push(null, { label: '資料完整度', value: cv, fmt: F.pct0, cur: compMonth(lastM), prev: compMonth(pm), curLabel: lastM.slice(5) + '月欄位', prevLabel: pm ? pm.slice(5) + '月欄位' : '上期', company: comp(roles.flatMap((r) => current(CO.people[r]))), light: !nn(cv) ? 'gray' : cv >= T.completenessGreen ? 'green' : cv >= T.completenessYellow ? 'yellow' : 'red', hint: '現行人員有值欄位 ÷ 應有欄位（僅計有效月份）' });
 
     const q = Store.qualityItems();
     const qImp = q.filter((x) => x.level === '重要').length, qRem = q.filter((x) => x.level === '提醒').length;
@@ -251,9 +255,9 @@
       { key: 'light', label: '燈號', html: (r) => r === avg ? '' : UI.dot(r.light), sortVal: (r) => ({ red: 0, yellow: 1, green: 2 })[r.light] },
       { key: 'plant', label: '服務廠', sticky: true, html: (r) => r === avg ? '<b>全公司平均</b>' : '<span class="name-link" data-plant="' + esc(r.plant) + '">' + esc(r.plant) + '</span>' },
       col('saCount', '現行服專人數', F.int, 'SA'), col('caCount', '現行出納人數', F.int, 'CA'),
-      col('saAvgCars', '服專月均接車台數', F.d1, 'SA'), col('saAvgRevenue', '服專月均業績', F.money, 'SA'), col('saPerCar', '服專單車產值', F.money, 'SA'),
-      col('app', 'APP預約指定率', F.pct, 'SA'), col('saCsi', '服專CSI', F.csi, 'SA'), col('saPower', '服專平均綜合戰力', F.score, 'SA'),
-      col('caAvgOrders', '出納月均結帳工單', F.d1, 'CA'), col('esign', '電子簽名率', F.pct, 'CA'), col('caCsi', '出納CSI', F.csi, 'CA'), col('caPower', '出納平均綜合戰力', F.score, 'CA'),
+      col('saAvgCars', '服專月均接車台數', F.int, 'SA'), col('capacityRate', '廠別量能達成', F.pct2, 'SA'), col('saAvgRevenue', '服專月均業績', F.money, 'SA'), col('saPerCar', '服專單車產值', F.money, 'SA'),
+      col('app', 'APP預約指定率', F.pct2, 'SA'), col('saCsi', '服專CSI', F.csi, 'SA'), col('saPower', '服專平均綜合戰力', F.score, 'SA'),
+      col('caAvgOrders', '出納月均結帳工單', F.int, 'CA'), col('esign', '電子簽名率', F.pct, 'CA'), col('caCsi', '出納CSI', F.csi, 'CA'), col('caPower', '出納平均綜合戰力', F.score, 'CA'),
       col('high', '高戰力人數', F.int), col('coach', '優先輔導人數', F.int, null, -1),
       { key: 'note', label: '配置提醒', html: (r) => r === avg ? '' : (r.note ? UI.pill(r.note, r.light === 'red' ? 'red' : 'yellow') : UI.pill('正常', 'green')) }
     ].filter((c) => !c.role || roleOn(c.role));
@@ -339,18 +343,19 @@
     if (role === 'SA') {
       out.push(kpi(Object.assign({ label: '現行人數', value: sum(plants.map((r) => r.saCount)), unit: '人', light: 'blue', company: co.length, hint: '依115.9名冊；本期／上期為當月有接車人數' }, kpiMonthly(D, 'SA', (r) => activeCount(r, 'cars')))));
       M({ label: '累積接車台數', value: colSum(rows, 'cars'), unit: '台', company: colSum(coRows, 'cars') }, (r) => colSum(r, 'cars'));
-      M({ label: '月均接車台數（人均）', value: pm(cur, 'avgCars'), fmt: F.d1, unit: '台', company: pm(co, 'avgCars') }, (r) => colMean(r, 'cars'));
+      M({ label: '月均接車台數（人均）', value: pm(cur, 'avgCars'), fmt: F.int, unit: '台', company: pm(co, 'avgCars') }, (r) => colMean(r, 'cars'));
       M({ label: '累積業績', value: colSum(rows, 'revenue'), fmt: F.money, unit: '元', company: colSum(coRows, 'revenue') }, (r) => colSum(r, 'revenue'));
       M({ label: '月均業績（人均）', value: pm(cur, 'avgRevenue'), fmt: F.money, unit: '元', company: pm(co, 'avgRevenue') }, (r) => colMean(r, 'revenue'));
+      out.push(kpi({ label: '接車量能達成率', value: pm(cur, 'capacityRate'), fmt: F.pct2, light: nn(pm(cur, 'capacityRate')) ? 'blue' : 'gray', cur: pm(cur, 'capacityRate'), curLabel: '期間', company: pm(co, 'capacityRate'), hint: '接車台數 ÷（工作日 × ' + S.cfg.capacity.perDay + ' 台）；需於設定頁填入各月工作日，未填顯示「—」' }));
       M({ label: '單車產值', value: colSum(rows, 'cars') ? colSum(rows, 'revenue') / colSum(rows, 'cars') : null, fmt: F.money, unit: '元', company: colSum(coRows, 'cars') ? colSum(coRows, 'revenue') / colSum(coRows, 'cars') : null, hint: '業績合計 ÷ 接車合計' }, (r) => { const c = colSum(r, 'cars'); return c ? colSum(r, 'revenue') / c : null; });
-      [['app', 'APP預約指定率', F.pct], ['a1', 'A1準時定保達成', F.pct], ['a2', 'A2準時定保達成', F.pct], ['bodyPaint', '自費鈑噴達成', F.pct], ['csi', 'CSI滿意度', F.csi], ['csiFirst', 'CSI首回滿意度', F.csi], ['esSelf', 'ES自主滿意度', F.csi], ['esRedesignate', 'ES服專再指定率', F.pct]].forEach(([k, l, f]) =>
-        M({ label: l, value: pm(cur, k), fmt: f, company: pm(co, k), deltaFmt: f === F.pct ? (v) => (v * 100).toFixed(1) + 'pt' : F.d1 }, (r) => colMean(r, k)));
+      [['app', 'APP預約指定率', F.pct2], ['a1', 'A1準時定保達成', F.pct2], ['a2', 'A2準時定保達成', F.pct2], ['bodyPaint', '自費鈑噴達成', F.pct2], ['csi', 'CSI滿意度', F.csi], ['csiFirst', 'CSI首回滿意度', F.csi], ['esSelf', 'ES自主滿意度', F.csi], ['esRedesignate', 'ES服專再指定率', F.pct]].forEach(([k, l, f]) =>
+        M({ label: l, value: pm(cur, k), fmt: f, company: pm(co, k), deltaFmt: f === F.pct || f === F.pct2 ? (v) => (v * 100).toFixed(2) + 'pp' : F.d1 }, (r) => colMean(r, k)));
       [['ngFee', '每100台收費解說NG'], ['ngTime', '每100台時間管理NG'], ['keyUnlock', '每100台解金鑰']].forEach(([k, l]) =>
         M({ label: l, value: per100(rows, k, 'cars'), fmt: F.d2, goodDir: -1, company: per100(coRows, k, 'cars'), hint: '合計次數 ÷ 接車台數 × 100，越少越好' }, (r) => per100(r, k, 'cars')));
     } else {
       out.push(kpi(Object.assign({ label: '現行人數', value: sum(plants.map((r) => r.caCount)), unit: '人', light: 'blue', company: co.length, hint: '依115.9名冊；本期／上期為當月有結帳人數' }, kpiMonthly(D, 'CA', (r) => activeCount(r, 'orders')))));
       M({ label: '累積結帳工單', value: colSum(rows, 'orders'), unit: '張', company: colSum(coRows, 'orders') }, (r) => colSum(r, 'orders'));
-      M({ label: '月均結帳工單（人均）', value: pm(cur, 'avgOrders'), fmt: F.d1, unit: '張', company: pm(co, 'avgOrders') }, (r) => colMean(r, 'orders'));
+      M({ label: '月均結帳工單（人均）', value: pm(cur, 'avgOrders'), fmt: F.int, unit: '張', company: pm(co, 'avgOrders') }, (r) => colMean(r, 'orders'));
       [['esign', '電子簽名率', F.pct], ['card', '感心卡平均核卡', F.d2], ['csi', 'CSI滿意度', F.csi], ['csiFirst', 'CSI首回滿意度', F.csi], ['esSelf', 'ES自主滿意度', F.csi]].forEach(([k, l, f]) =>
         M({ label: l, value: pm(cur, k), fmt: f, company: pm(co, k), deltaFmt: f === F.pct ? (v) => (v * 100).toFixed(1) + 'pt' : F.d2 }, (r) => colMean(r, k)));
       [['ngFee', '每100張工單收費解說NG'], ['keyUnlock', '每100張工單解金鑰']].forEach(([k, l]) =>
@@ -376,7 +381,8 @@
         card('綜合戰力分布', '<div class="chart" id="q2"></div>', { sub: '依證照級別' }) + '</div>' +
         '<div class="section-title">' + roleName(role) + '明細表</div>' +
         card(roleName(role) + '明細（' + list.length + '人，現行 ' + cur.length + ' 人）', '<div id="rt"></div>', { tools: UI.exportBtns('rt'), flush: true });
-      const t = table(el.querySelector('#rt'), { columns: personColumns(role), rows: list, sortKey: 'power', onRow: (p) => root.App.openPerson(p.id), rowClass: (p) => p.status !== '現行' ? 'hist' : '' });
+      const extra = role === 'SA' ? [{ key: 'capacityRate', label: '接車量能達成率', num: true, fmt: F.pct2 }] : [];
+      const t = table(el.querySelector('#rt'), { columns: personColumns(role, { extra }), rows: list, sortKey: 'power', onRow: (p) => root.App.openPerson(p.id), rowClass: (p) => p.status !== '現行' ? 'hist' : '' });
       UI.bindExport(el, 'rt', roleName(role) + '明細', t);
       const pts = cur.filter((p) => nn(p.prVolume) && nn(p.prService));
       chart(el.querySelector('#q1'), {
