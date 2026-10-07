@@ -42,9 +42,9 @@
   }
   function loadConfig() {
     const over = lsGet(LS.cfg);
-    S.cfg = deepMerge(defaultConfig(), over ? { weights: over.weights, thresholds: over.thresholds, capacity: over.capacity } : {});
+    S.cfg = deepMerge(defaultConfig(), over ? { weights: over.weights, thresholds: over.thresholds, capacity: over.capacity, retention: over.retention } : {});
   }
-  function saveConfig(cfg) { lsSet(LS.cfg, { weights: cfg.weights, thresholds: cfg.thresholds, capacity: cfg.capacity }); S.cfg = cfg; S.cache = {}; }
+  function saveConfig(cfg) { lsSet(LS.cfg, { weights: cfg.weights, thresholds: cfg.thresholds, capacity: cfg.capacity, retention: cfg.retention }); S.cfg = cfg; S.cache = {}; }
   function resetConfig() { lsDel(LS.cfg); loadConfig(); S.cache = {}; }
   function init() {
     loadModel(); loadConfig();
@@ -216,6 +216,7 @@
         high: sa.concat(ca).filter((p) => nn(p.power) && p.power >= T.highPower).length,
         saHigh: sa.filter((p) => nn(p.power) && p.power >= T.highPower).length, caHigh: ca.filter((p) => nn(p.power) && p.power >= T.highPower).length,
         coach: sa.concat(ca).filter((p) => p.coach).length,
+        retRate: (() => { const R = root.RETX && root.RETX.plantRet ? root.RETX.plantRet().find((x) => x.plant === n) : null; return R ? R.plantRate : null; })(),
         revTarget: ro.revTarget, revActual: ro.revActual, revRate: ro.revRate, cumTarget: ro.cumTarget, cumActual: ro.cumActual, cumRate: ro.cumRate, workdays: ro.workdays,
         saPeople: sa, caPeople: ca, excelNote: ro.note || ''
       };
@@ -228,6 +229,7 @@
       saAvgCars: mean(all.SA.map((p) => p.avgCars)), saAvgRevenue: mean(all.SA.map((p) => p.avgRevenue)), saPerCar: mean(all.SA.map((p) => p.perCar)),
       app: mean(all.SA.map((p) => p.app)), saCsi: mean(all.SA.map((p) => p.csi)), saPower: mean(all.SA.map((p) => p.power)),
       caAvgOrders: mean(all.CA.map((p) => p.avgOrders)), esign: mean(all.CA.map((p) => p.esign)), caCsi: mean(all.CA.map((p) => p.csi)), caPower: mean(all.CA.map((p) => p.power)),
+      retRate: root.RETX && root.RETX.plantRet ? root.RETX.companyRet(root.RETX.plantRet()) : null,
       high: mean(rows.map((r) => r.high)), coach: mean(rows.map((r) => r.coach)), capacityRate: mean(all.SA.map((p) => p.capacityRate)),
       revRate: (() => { const t = sum(rows.map((r) => r.revTarget || 0)); return t ? sum(rows.map((r) => r.revActual || 0)) / t : null; })(),
       cumRate: (() => { const t = sum(rows.map((r) => r.cumTarget || 0)); return t ? sum(rows.map((r) => r.cumActual || 0)) / t : null; })()

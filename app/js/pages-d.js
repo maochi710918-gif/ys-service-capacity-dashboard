@@ -103,6 +103,33 @@
         card('服專問卷排名', '<div id="bt5"></div>', { flush: true, tools: UI.exportBtns('bt5'), sub: '問卷 ≥ ' + T.csiMinSurveys + ' 份者排名' }) + '</div><div style="height:12px"></div>' +
         card('顧客意見（VOC）', '<div id="bt6"></div>', { flush: true, tools: UI.exportBtns('bt6'), sub: '2026 年有文字意見之問卷' }) : '<div class="banner info"><b>顧客滿意</b><span>' + esc(csiNote) + '</span></div>');
 
+    /* ⑤ 服專定保保留率（接待保留率）＋ CRM 追蹤 */
+    const RX = root.RETX;
+    if (RX && RX.ret && RX.ret()) {
+      const pl = RX.plantRet().filter((p) => p.inScope && (!S.filters.plant || p.plant === S.filters.plant)).sort((a, b) => b.plantRate - a.plantRate);
+      const coR = RX.companyRet(RX.plantRet());
+      const advs = RX.ret().advisors.filter((a) => (!S.filters.plant || a.plant === S.filters.plant)).map((a) => Object.assign({}, a, { p: D.P.SA.find((x) => x.name === a.advisor) }));
+      const ng = advs.filter((a) => a.ng);
+      const cr = RX.scoped(D), cst = cr && cr.rows.length ? RX.stats(cr.rows) : null;
+      const sec = document.createElement('div');
+      sec.innerHTML = '<div class="section-title">⑤ 服專定保保留率（CY25 → CY26）</div><div class="grid g2b">' +
+        card('各廠定保保留率', '<div id="bt7"></div>', { flush: true, sub: '範圍廠別加權 ' + F.pct2(coR), tools: '<a class="btn sm" href="#/retention">完整分析 →</a>' }) +
+        card('保留率 NG 服專（較所屬廠低 3pp 以上）', '<div id="bt8"></div>', { flush: true, sub: ng.length + ' 列' + (cst ? '｜CRM 查詢（' + esc(RX.coverage(cr).plants.join('、')) + '）可聯繫待追蹤 ' + cst.follow + ' 位' : '') }) + '</div>';
+      el.appendChild(sec);
+      table(sec.querySelector('#bt7'), {
+        columns: [{ key: 'rk', label: '名次', num: true, get: (p) => pl.indexOf(p) + 1, html: (p) => '<b>' + medal(pl.indexOf(p) + 1) + '</b>' }, { key: 'plant', label: '服務廠', html: (p) => '<b>' + esc(p.plant) + '</b>' },
+          { key: 'plantRate', label: '廠定保保留率', html: (p) => bar(p.plantRate * 100, 100, nn(coR) && p.plantRate >= coR ? 'var(--navy-700)' : 'var(--bad)', F.pct2(p.plantRate)), sortVal: (p) => p.plantRate },
+          { key: 'target', label: 'CY26對象', num: true, fmt: F.int }, { key: 'ng', label: 'NG服專', num: true, cls: (p, v) => v ? 'cell-bad' : '' }],
+        rows: pl, sortKey: 'rk', sortDir: 1, short: true
+      });
+      table(sec.querySelector('#bt8'), {
+        columns: [{ key: 'plant', label: '服務廠' }, { key: 'advisor', label: '服專', html: (a) => a.p ? UI.nameLink(a.p) : esc(a.advisor) + ' <span class="note">（總覽無此人）</span>' },
+          { key: 'rate', label: '服專保留率', num: true, fmt: F.pct2, cls: () => 'cell-bad' }, { key: 'plantRate', label: '廠保留率', num: true, fmt: F.pct2 },
+          { key: 'vsPlant', label: 'vs 廠（pp）', num: true, fmt: (v) => nn(v) ? (v * 100).toFixed(2) : '—' }, { key: 'target', label: 'CY26對象', num: true, fmt: F.int }],
+        rows: ng, sortKey: 'vsPlant', sortDir: 1, short: true
+      });
+    }
+
     /* 圖 1：廠戰力 */
     const rv = ranked.slice().reverse();
     chart(el.querySelector('#bc1'), {

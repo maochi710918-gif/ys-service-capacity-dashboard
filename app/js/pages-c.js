@@ -340,6 +340,8 @@
     el.querySelector('#file').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) readFile(f); });
     el.querySelector('#rst').addEventListener('click', () => { if (confirm('確定還原為預設 Excel 資料？（目前匯入的資料將被取代）')) { Store.resetModel(); pending = null; lastResult = null; UI.toast('已還原預設資料'); root.App.rerender(); } });
     if (pending) renderPreview(el); if (lastResult) renderResult(el);
+    if (root.retImportBlock) root.retImportBlock(el);
+    if (root.crmImportBlock) root.crmImportBlock(el);
 
     function readFile(f) {
       const rd = new FileReader();
@@ -405,6 +407,7 @@
       TH_LABELS.map(([g, items]) => '<div class="section-title">' + g + '</div>' + card(g, '<div class="form-grid">' + items.map(([k, l]) => '<div class="f"><label>' + l + '　<span class="note">預設 ' + def.thresholds[k] + '</span></label><input type="number" step="any" data-t="' + k + '" value="' + cfg.thresholds[k] + '"></div>').join('') + '</div>')).join('') +
       '<div class="section-title">服專標準量能（接車量能達成率）</div>' + card('標準量能＝工作日 × 每日標準台數', '<div class="form-grid"><div class="f"><label>每工作日標準台數　<span class="note">預設 ' + def.capacity.perDay + '</span></label><input type="number" step="any" id="capDay" value="' + cfg.capacity.perDay + '"></div>' +
         Store.allMonths().map((m) => '<div class="f"><label>' + m + ' 工作日</label><input type="number" step="1" min="0" data-wd="' + m + '" value="' + (cfg.capacity.workdays[m] != null ? cfg.capacity.workdays[m] : '') + '" placeholder="未提供"></div>').join('') + '</div><p class="note">Excel 目前未提供工作日／出勤日資料。所有有接車月份皆填入後才計算達成率，否則顯示「—」，不以推估值代替。</p>') +
+      '<div class="section-title">顧客保留率（CRM）</div>' + card('保留率定義', '<div class="form-grid">' + [['days', '保留：最近回廠 ≤（天）'], ['riskDays', '流失風險起算：未回廠 >（天）'], ['goodRate', '綠燈：保留率 ≥（0–1）'], ['warnRate', '黃燈：保留率 ≥（0–1）'], ['minCustomers', '服專客戶數少於此值僅供參考']].map(([k, l]) => '<div class="f"><label>' + l + '　<span class="note">預設 ' + def.retention[k] + '</span></label><input type="number" step="any" data-rt="' + k + '" value="' + cfg.retention[k] + '"></div>').join('') + '</div>') +
       '<div class="section-title">升階準備度門檻（Excel 公式）</div>' + card('升階準備度', '<div class="form-grid">' + PROMO_LABELS.map(([k, l, fs]) => fs.map((f) => '<div class="f"><label>' + l + '：' + PK[f] + '　<span class="note">預設 ' + def.thresholds.promo[k][f] + '</span></label><input type="number" step="any" data-p="' + k + '.' + f + '" value="' + cfg.thresholds.promo[k][f] + '"></div>').join('')).join('') + '</div>');
     const upd = () => ['SA', 'CA'].forEach((role) => { const s = sum(Array.from(el.querySelectorAll('[data-w^="' + role + '."]')).map((i) => Number(i.value) || 0)); const b = el.querySelector('#sum' + role); b.textContent = s.toFixed(1) + '%'; b.style.color = Math.abs(s - 100) < 0.01 ? 'var(--good)' : 'var(--bad)'; });
     el.querySelectorAll('[data-w]').forEach((i) => i.addEventListener('input', upd)); upd();
@@ -417,6 +420,7 @@
       el.querySelectorAll('[data-t]').forEach((i) => { cfg.thresholds[i.dataset.t] = Number(i.value); });
       el.querySelectorAll('[data-p]').forEach((i) => { const [k, f] = i.dataset.p.split('.'); cfg.thresholds.promo[k][f] = Number(i.value); });
       cfg.capacity.perDay = Number(el.querySelector('#capDay').value) || def.capacity.perDay;
+      el.querySelectorAll('[data-rt]').forEach((i) => { cfg.retention[i.dataset.rt] = Number(i.value); });
       cfg.capacity.workdays = {}; el.querySelectorAll('[data-wd]').forEach((i) => { if (i.value !== '') cfg.capacity.workdays[i.dataset.wd] = Number(i.value); });
       Store.saveConfig(cfg); UI.toast('設定已儲存，已重新計算'); root.App.rerender();
     });

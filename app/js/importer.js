@@ -209,7 +209,76 @@
     return { model, report };
   }
 
-  const api = { parseWorkbook, normMonth };
+  /** CRM 查詢結果（去識別化）：顧客保留率用。只保留分析所需欄位，不含聯絡資料。 */
+  const CRM_COLS = {
+    '識別碼': 'id', '最近服務廠': 'plant', '服務專員': 'advisor', '最近回廠': 'lastVisit', '未回廠天數': 'days', '回廠類別': 'type',
+    '定保頻率': 'freq', '一年定保次數': 'pmCount', '車型': 'model', '車齡': 'carAge', '最新里程': 'mileage', '縣市': 'city',
+    '車主授權狀態': 'consent', '勿擾': 'dnd', '建議行動': 'action', '保固狀態': 'warranty', '近三月消費': 'spend3m'
+  };
+  function parseCrm(XLSX, wb, fileName, queryDate) {
+    const report = { fileName, errors: [], warnings: [] };
+    const name = wb.SheetNames.find((n) => /查詢結果/.test(n)) || wb.SheetNames[0];
+    const rows = sheetRows(XLSX, wb.Sheets[name]);
+    const hIdx = rows.findIndex((r) => r && r.some((c) => clean(c) === '識別碼'));
+    if (hIdx < 0) { report.errors.push({ sheet: name, msg: '找不到「識別碼」表頭' }); return { rows: [], report }; }
+    const head = rows[hIdx].map(clean), idx = {};
+    Object.keys(CRM_COLS).forEach((h) => { const i = head.indexOf(clean(h)); if (i >= 0) idx[CRM_COLS[h]] = i; });
+    ['id', 'plant', 'advisor'].forEach((k) => { if (idx[k] === undefined) report.errors.push({ sheet: name, msg: '缺少必要欄位：' + Object.keys(CRM_COLS).find((h) => CRM_COLS[h] === k) }); });
+    if (idx.lastVisit === undefined && idx.days === undefined) report.errors.push({ sheet: name, msg: '缺少「最近回廠」或「未回廠天數」' });
+    const q = new Date(queryDate + 'T00:00:00');
+    const toDate = (v) => { if (v == null || v === '') return null; if (typeof v === 'number') return new Date(Math.round((v - 25569) * 86400 * 1000)); const d = new Date(String(v).replace(/\//g, '-') + 'T00:00:00'); return isNaN(d) ? null : d; };
+    const out = [], seen = {};
+    for (let r = hIdx + 1; r < rows.length; r++) {
+      const row = rows[r]; if (!row || isBlank(row[idx.id])) continue;
+      const o = {};
+      Object.keys(idx).forEach((k) => { let v = row[idx[k]]; if (isBlank(v)) v = null; else if (typeof v === 'string') v = v.trim(); o[k] = v; });
+      const lv = toDate(o.lastVisit);
+      if (lv) o.lastVisit = lv.toISOString().slice(0, 10);
+      if (o.days == null && lv) o.days = Math.round((q - lv) / 86400000);
+      if (o.days == null) report.warnings.push({ row: r + 1, msg: o.id + ' 無最近回廠日期' });
+      if (seen[o.id]) { report.warnings.push({ row: r + 1, msg: '識別碼重複：' + o.id }); continue; }
+      seen[o.id] = 1; out.push(o);
+    }
+    return { rows: out, report };
+  }
+
+  /** 接待保留率（服專定保保留率）：服專×服務廠明細＋廠合計＋經銷商合計 */
+  const RET_COLS = {
+    '經銷商': 'dealer', '廠代碼': 'code', '服務廠': 'plant', 'CY25最後定保服專': 'advisor', 'UIO數': 'uio', '定保次數': 'pmCount',
+    '定保總金額(應付)': 'pmAmount', '維修次數': 'repairCount', '自費總金額(含定保)': 'selfAmount', '自費次數': 'selfCount', '定保單台': 'pmPerCar',
+    '廠定保單台': 'plantPmPerCar', '服專定保單台vs.廠': 'pmPerCarVsPlant', 'CY26對象': 'target', '服專定保保留率': 'rate', '廠定保保留率': 'plantRate',
+    '服專定保流失率': 'churn', '有效服專': 'valid', '服專保留率vs.廠': 'vsPlant', '服專保留率NG判斷': 'ng', '備註': 'note'
+  };
+  function parseRetention(XLSX, wb, fileName) {
+    const report = { fileName, errors: [], warnings: [] };
+    const name = wb.SheetNames[0];
+    const rows = sheetRows(XLSX, wb.Sheets[name]);
+    const hIdx = rows.findIndex((r) => r && r.some((c) => clean(c) === '服專定保保留率'));
+    if (hIdx < 0) { report.errors.push({ sheet: name, msg: '找不到「服專定保保留率」表頭' }); return { advisors: [], plants: [], dealers: [], report }; }
+    const head = rows[hIdx].map(clean), idx = {};
+    Object.keys(RET_COLS).forEach((h) => { const i = head.indexOf(clean(h)); if (i >= 0) idx[RET_COLS[h]] = i; });
+    ['dealer', 'code', 'advisor', 'rate', 'plantRate', 'target'].forEach((k) => { if (idx[k] === undefined) report.errors.push({ sheet: name, msg: '缺少欄位：' + Object.keys(RET_COLS).find((h) => RET_COLS[h] === k) }); });
+    // 定義列（例：有效服專門檻、NG 門檻）
+    const defs = rows.slice(0, hIdx + 1).map((r) => (r || []).filter((c) => typeof c === 'string' && /定義/.test(c)).join('')).filter(Boolean).join('');
+    const params = (rows[hIdx - 1] || []).filter((c) => typeof c === 'number');
+    const advisors = [], plants = [], dealers = [];
+    let lastPlant = {};
+    for (let r = hIdx + 1; r < rows.length; r++) {
+      const row = rows[r]; if (!row) continue;
+      const o = {};
+      Object.keys(idx).forEach((k) => { let v = row[idx[k]]; if (isBlank(v)) v = null; else if (typeof v === 'string') v = v.trim(); o[k] = v; });
+      if (!o.dealer && !o.code && !o.advisor) continue;
+      if (o.dealer && /合計/.test(o.dealer)) { o.dealer = o.dealer.replace(/\s*合計/, ''); dealers.push(o); continue; }
+      if (o.code && /合計/.test(o.code)) { o.code = o.code.replace(/\s*合計/, ''); o.plant = lastPlant[o.code] || o.plant; plants.push(o); continue; }
+      if (!o.advisor) { report.warnings.push({ row: r + 1, msg: '缺服專姓名' }); continue; }
+      lastPlant[o.code] = o.plant;
+      o.ng = o.ng === 'NG'; o.valid = o.valid === '有效服專';
+      advisors.push(o);
+    }
+    return { advisors, plants, dealers, defs, params, report };
+  }
+
+  const api = { parseWorkbook, normMonth, parseCrm, parseRetention };
   root.Importer = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

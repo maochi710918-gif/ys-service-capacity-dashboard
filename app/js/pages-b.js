@@ -84,7 +84,7 @@
         '<div class="sw" style="margin-top:10px"><div><b class="up">▲ 優勢構面</b><ul>' + (strengths.map((x) => '<li>' + x.d.label + ' ' + F.pr(x.v) + '</li>').join('') || '<li>尚無構面PR ≥ 50</li>') + '</ul></div><div><b class="down">▼ 短板構面</b><ul>' + (weak.map((x) => '<li>' + x.d.label + ' ' + F.pr(x.v) + '<br><span class="note">建議：' + esc(S.cfg.training[x.d.key] || '') + '</span></li>').join('') || '<li>無明顯短板（各構面PR ≥ 50）</li>') + '</ul></div></div>') +
       '</div>' +
       '<div class="section-title">績效資訊</div>' + card('個人 vs 所屬廠／全公司／同證照／同年資 平均', '<div id="perf"></div>', { flush: true, tools: UI.exportBtns('pf') }) +
-      csiCard(p, D) +
+      csiCard(p, D) + (root.retentionCard ? root.retentionCard(p) : '') +
       '<div class="section-title">視覺分析</div><div class="grid g2">' +
       card('戰力構面 PR 雷達', '<div class="chart" id="r1"></div>', { sub: '外圈＝100；比較同證照平均' }) +
       card('最近月份績效', '<div class="chips-sel" id="mkSel"></div><div class="chart" id="r2"></div>', { sub: '個人 vs 當月實際廠別平均 vs 全公司平均（人均）' }) +

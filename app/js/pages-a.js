@@ -272,7 +272,8 @@
       col('saAvgCars', '服專月均接車台數', F.int, 'SA'), col('capacityRate', '廠別量能達成', F.pct2, 'SA'), col('saAvgRevenue', '服專月均業績', F.money, 'SA'), col('saPerCar', '服專單車產值', F.money, 'SA'),
       col('app', 'APP預約指定率', F.pct2, 'SA'), col('saCsi', '服專CSI', F.csi, 'SA'), col('saPower', '服專平均綜合戰力', F.score, 'SA'),
       col('caAvgOrders', '出納月均結帳工單', F.int, 'CA'), col('esign', '電子簽名率', F.pct, 'CA'), col('caCsi', '出納CSI', F.csi, 'CA'), col('caPower', '出納平均綜合戰力', F.score, 'CA'),
-      col('revRate', '9月廠營收達成率', F.pct2), col('cumRate', '8–9月累積營收達成', F.pct2),
+      col('retRate', '廠定保保留率', F.pct2, 'SA'), col('revRate', '9月廠營收達成率', F.pct2),
+ col('cumRate', '8–9月累積營收達成', F.pct2),
       col('high', '高戰力人數', F.int), col('coach', '輔導／落差／基礎養成', F.int, null, -1),
       { key: 'note', label: '配置提醒', html: (r) => r === avg ? '' : (r.note ? UI.pill(r.note, r.light === 'red' ? 'red' : 'yellow') : UI.pill('正常', 'green')) }
     ].filter((c) => !c.role || roleOn(c.role));
