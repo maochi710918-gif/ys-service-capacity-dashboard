@@ -158,7 +158,7 @@
     const top = rState.n === 'all' ? cur : cur.slice(0, Number(rState.n));
     const alerts = PX.buildAlerts(D);
     const ps = Store.plantStats(D).rows;
-    ps.filter((r) => r.saCount > 0 && r.caCount === 0).forEach((r) => alerts.push({ key: 'plantZero', label: '服務廠出納配置為0', level: 'red', detail: r.plant + '：服專 ' + r.saCount + ' 人、出納 0 人', person: { plant: r.plant, name: '—', role: 'CA', id: '' }, plantOnly: true }));
+    ps.filter((r) => r.caCount === 0).forEach((r) => alerts.push({ key: 'plantZero', label: '服務廠出納配置為0', level: 'red', detail: r.plant + '：服專 ' + r.saCount + ' 人、出納 0 人', person: { plant: r.plant, name: '—', role: 'CA', id: '' }, plantOnly: true }));
     const types = Array.from(new Set(alerts.map((a) => a.label)));
     const shown = rState.af ? alerts.filter((a) => a.label === rState.af) : alerts;
     const T = S.cfg.thresholds;
@@ -229,38 +229,45 @@
     UI.bindExport(el, 'rc', 'Excel核對', rt);
   };
   function updateSummary() {
-    const L = root.UPDATE_LOG; if (!L) return '';
-    const K = { totalCars: '累積接車', avgCars: '月均接車', perCar: '單車產值', age3: '3年內占比', age38: '3–8年占比', age8: '8年以上占比', ageComplete: '車齡完整度', ngFeePer100: '每100台收費NG', ngTimePer100: '每100台時間NG', keyPer100: '每100台解金鑰', trendCars: '近3月接車趨勢', volatility: '接車波動度', prVolume: '量能PR', prRevenue: '營收效率PR', prOps: '作業品質PR', power: '綜合戰力', rank: '排名', prLicense: '同證照PR', prTenure: '同年資PR', licenseGap: '證照戰力落差', promotion: '升階準備度', talentType: '人才類型' };
-    const fk = (k, v) => v == null ? '—' : typeof v === 'string' ? v : k === 'power' ? v.toFixed(2) : k === 'rank' ? String(v) : /^pr/.test(k) ? (v * 100).toFixed(1) + '%' : /^age/.test(k) ? (v * 100).toFixed(k === 'ageComplete' ? 0 : 1) + '%' : k === 'licenseGap' ? v.toFixed(1) : /Per100|volatility|trend/.test(k) ? v.toFixed(3) : Math.round(v).toLocaleString();
-    const c = L.counts, ck = L.checks;
-    const ppl = L.people.filter((p) => p.ch.rank || p.ch.talentType || p.ch.promotion);
-    const ok = (b) => b ? '<span class="up">✓</span>' : '<span class="down">✗</span>';
-    return '<div class="card" style="margin-bottom:14px;border-left:4px solid var(--red)"><div class="card-h"><h3>本次更新摘要｜' + esc(L.source) + '</h3><span class="sub">' + esc(L.file) + '｜' + String(L.generatedAt).slice(0, 10) + '</span><div class="tools"><button class="btn sm" id="ulDetail">逐人異動明細</button></div></div><div class="card-b">' +
-      '<div class="stat-row" style="margin-bottom:10px"><div class="stat"><b>' + L.totals.lastMonthCars[0].toLocaleString() + ' → ' + L.totals.lastMonthCars[1].toLocaleString() + '</b><span>' + L.month + ' 接車台數</span></div><div class="stat"><b>' + L.totals.ytdCars[0].toLocaleString() + ' → ' + L.totals.ytdCars[1].toLocaleString() + '</b><span>1–8月累積接車</span></div>' +
-      '<div class="stat"><b>' + c.directRows + '</b><span>直接異動（月度列）</span></div><div class="stat"><b>' + c.people + '</b><span>受影響人員</span></div><div class="stat wn"><b>' + c.powerChanged + '</b><span>綜合戰力變動</span></div><div class="stat wn"><b>' + c.rankChanged + '</b><span>排名變動</span></div><div class="stat err"><b>' + c.talentChanged + ' / ' + c.promoChanged + '</b><span>人才類型／升階變動</span></div><div class="stat"><b>' + c.plants + '</b><span>廠別指標變動</span></div></div>' +
-      '<div class="grid g2"><div><b>受影響頁面／模組</b><p class="note" style="margin:4px 0 10px">戰力總表、管理總覽、服務廠比較、服專分析、個人分析、月度推移、車齡結構、綜合戰力、人才九宮格、升階與人才梯隊、排行與異常。出納頁面：出納原始資料未變動。</p>' +
-      '<b>重新計算指標</b><p class="note" style="margin:4px 0 10px">接車台數、累積／月均接車、趨勢、波動度、車齡結構與完整度、單車產值、每100台NG／時間NG／解金鑰 → 量能PR、營收效率PR、作業品質PR → 綜合戰力、排名、同證照PR、同年資PR、證照戰力落差 → 升階準備度、人才類型、九宮格 → 廠別月均接車、單車產值、平均戰力、人才結構。系統依月度底層資料完整重算（非逐格覆寫），無舊快取。</p>' +
-      '<b>排除的廠別</b><p class="note" style="margin:4px 0">' + esc(L.excluded.join('、')) + '：不顯示、不排名、不列入平均、圖表與總廠數；原始列保留於資料層供稽核。</p></div>' +
-      '<div><b>驗證</b><table class="tbl" style="margin-top:4px"><tbody>' +
-      '<tr><td>' + L.month + ' 接車全部來自070更正版（月度列逐筆重算）</td><td>' + ok(true) + '</td></tr>' +
-      '<tr><td>非' + L.month + '月份接車未被改動（' + ck.nonLastMonthCarsChanged + ' 筆差異）</td><td>' + ok(ck.nonLastMonthCarsChanged === 0) + '</td></tr>' +
-      '<tr><td>業績、APP、A1/A2、鈑噴、CSI、ES、NG次數等原始資料未被覆寫（' + ck.untouchedSourceDiffs + ' 筆差異）</td><td>' + ok(ck.untouchedSourceDiffs === 0) + '</td></tr>' +
-      '<tr><td>出納月度（9U2、電子簽名等）未變動</td><td>' + ok(ck.cashierMonthlyUnchanged) + '</td></tr>' +
-      '<tr><td>系統重算綜合戰力、排名、九宮格與 Excel 更正版一致（見下方核對表）</td><td>' + ok(true) + '</td></tr>' +
-      '<tr><td>資料異常待人工確認（同名跨職務／廠別）</td><td>' + (L.anomalies.length ? '<span class="down">' + L.anomalies.length + ' 筆</span>' : '無新增；既有跨職務紀錄見檢核項目') + '</td></tr></tbody></table>' +
-      '<b style="display:block;margin-top:10px">排名／人才分類變動人員</b><table class="tbl"><thead><tr><th>姓名</th><th>廠別</th><th>排名</th><th>綜合戰力</th><th>人才類型</th><th>升階準備度</th></tr></thead><tbody>' +
-      ppl.map((p) => '<tr><td>' + esc(p.name) + '</td><td>' + esc(p.plant) + '</td><td>' + (p.ch.rank ? p.ch.rank[0] + ' → <b>' + p.ch.rank[1] + '</b>' : '—') + '</td><td>' + (p.ch.power ? fk('power', p.ch.power[0]) + ' → <b>' + fk('power', p.ch.power[1]) + '</b>' : '—') + '</td><td>' + (p.ch.talentType ? esc(p.ch.talentType[0]) + ' → <b>' + esc(p.ch.talentType[1]) + '</b>' : '—') + '</td><td>' + (p.ch.promotion ? esc(p.ch.promotion[0]) + ' → <b>' + esc(p.ch.promotion[1]) + '</b>' : '—') + '</td></tr>').join('') + '</tbody></table></div></div>' +
-      '<p class="note" style="margin-top:10px">接車量能達成率（標準 ' + S.cfg.capacity.perDay + ' 台／工作日）：Excel 未提供工作日／出勤日資料，目前顯示「—」；系統管理員可於「指標與權重設定」填入各月工作日後自動計算。</p></div></div>';
+    const L = root.UPDATE_LOG; if (!L || !L.totals || L.totals.cars == null) return '';
+    const c = L.counts, T = L.totals, H = L.headcount;
+    const nf = (v) => v == null ? '—' : Math.round(v).toLocaleString();
+    const isCur = (p) => p.status === '現行';
+    const ppl = L.people.filter((p) => isCur(p) && (p.ch.rank || p.ch.talentType || p.ch.promotion));
+    const fk = (k, v) => v == null ? '—' : typeof v === 'string' ? v : k === 'power' ? v.toFixed(2) : String(v);
+    const gridTxt = (r) => (L.grid[r] || []).map((g) => g.type + ' ' + g.from + '→' + g.to).join('、') || '無變動';
+    return '<div class="card" style="margin-bottom:14px;border-left:4px solid var(--red)"><div class="card-h"><h3>本次更新摘要｜' + esc(L.source) + '</h3><span class="sub">' + esc(L.file) + '｜期間 ' + L.months[0] + '–' + L.months[L.months.length - 1].slice(5) + '（前版 ' + L.monthsOld[0] + '–' + L.monthsOld[L.monthsOld.length - 1].slice(5) + '）</span><div class="tools"><button class="btn sm" id="ulDetail">逐人異動明細</button></div></div><div class="card-b">' +
+      '<div class="stat-row" style="margin-bottom:10px">' +
+      '<div class="stat"><b>' + nf(T.carsOld) + ' → ' + nf(T.cars) + '</b><span>累積接車（個人去重）</span></div>' +
+      '<div class="stat"><b>' + nf(T.ordersOld) + ' → ' + nf(T.orders) + '</b><span>累積結帳（個人去重）</span></div>' +
+      '<div class="stat"><b>' + (T.revenueOld / 1e8).toFixed(2) + ' → ' + (T.revenue / 1e8).toFixed(2) + ' 億</b><span>累積服專業績</span></div>' +
+      '<div class="stat"><b>' + H.rosterSA[1] + ' / ' + H.rosterCA[1] + '</b><span>現職服專／出納（9/30）</span></div>' +
+      '<div class="stat wn"><b>' + c.powerChanged + '</b><span>現職綜合戰力變動</span></div><div class="stat wn"><b>' + c.rankChanged + '</b><span>現職排名變動</span></div>' +
+      '<div class="stat err"><b>' + c.talentChanged + ' / ' + c.promoChanged + '</b><span>人才類型／升階變動</span></div><div class="stat"><b>' + c.added + '</b><span>新增總覽列（多為他職工作量）</span></div></div>' +
+      '<div class="grid g2"><div>' +
+      '<b>本次更新內容</b><ul class="note" style="margin:4px 0 10px;padding-left:18px">' +
+      '<li>期間延伸至 9 月：工作量、個人業績、APP 至 9 月；考核至 8 月（9 月考核留白，不補 0）。</li>' +
+      '<li>1–8 月工作量依全部人員與完整工單號碼重新核對（例：1 月接車 12,000→12,027、結帳 11,621→12,644）。</li>' +
+      '<li>計算口徑：單車產值分母只取有業績月份；NG 發生率分母只取有該項 NG 成績月份；APP 以指定次數÷同來源接車數加權；波動度改樣本標準差；CSI 均值差＝6–8 月比 3–5 月；資料完整度＝有效欄位÷（13 項×任職月數）。</li>' +
+      '<li>綜合戰力須各構面皆可計算才計分；未計分者標示「不盤點／資料不足」。越少越好指標之 PR＝高於本人比例。</li>' +
+      '<li>人員口徑核對至 9/30：新增 留停、預定到職、範圍外 等狀態；他職人員保留工作量，不列現職盤點。</li>' +
+      '<li>新增：8–9 月廠工作天數與標準量能達成率（11.5 台／工作日）、8–9 月廠營收目標／實績。</li></ul>' +
+      '<b>九宮格變動</b><p class="note" style="margin:4px 0">服專：' + esc(gridTxt('SA')) + '<br>出納：' + esc(gridTxt('CA')) + '</p>' +
+      '<b>排除的廠別</b><p class="note" style="margin:4px 0">' + esc(L.excluded.join('、')) + '（16 服務廠為分析範圍）。</p></div>' +
+      '<div><b>現職人員排名／人才分類變動</b><div class="tbl-wrap short"><table class="tbl"><thead><tr><th>姓名</th><th>角色</th><th>廠別</th><th>排名</th><th>綜合戰力</th><th>人才類型</th><th>升階準備度</th></tr></thead><tbody>' +
+      ppl.map((p) => '<tr><td>' + esc(p.name) + '</td><td>' + (p.role === 'SA' ? '服專' : '出納') + '</td><td>' + esc(p.plant) + '</td><td>' + (p.ch.rank ? fk('rank', p.ch.rank[0]) + ' → <b>' + fk('rank', p.ch.rank[1]) + '</b>' : '—') + '</td><td>' + (p.ch.power ? fk('power', p.ch.power[0]) + ' → <b>' + fk('power', p.ch.power[1]) + '</b>' : '—') + '</td><td>' + (p.ch.talentType ? esc(p.ch.talentType[0]) + ' → <b>' + esc(p.ch.talentType[1]) + '</b>' : '—') + '</td><td>' + (p.ch.promotion ? esc(p.ch.promotion[0]) + ' → <b>' + esc(p.ch.promotion[1]) + '</b>' : '—') + '</td></tr>').join('') + '</tbody></table></div>' +
+      '<p class="note" style="margin-top:8px">系統由月度底層資料完整重算，綜合戰力、排名、升階準備度、人才類型、九宮格與 Excel 逐人一致（同年資PR「&lt;1年」Excel 公式錯誤除外）。</p></div></div></div></div>';
   }
   function updateDetail() {
     const L = root.UPDATE_LOG; if (!L) return;
     const rows = [];
-    L.people.forEach((p) => Object.keys(p.ch).forEach((k) => rows.push({ name: p.name, plant: p.plant, role: p.role === 'SA' ? '服專' : '出納', k, a: p.ch[k][0], b: p.ch[k][1] })));
+    (L.monthly || []).forEach((m) => ['cars', 'orders', 'revenue'].forEach((k) => { if (m[k][0] !== m[k][1]) rows.push({ role: '月合計', plant: '全公司', name: m.month, k: { cars: '接車台數', orders: '結帳工單', revenue: '服專業績' }[k], a: m[k][0], b: m[k][1] }); }));
+    L.people.forEach((p) => Object.keys(p.ch).forEach((k) => rows.push({ name: p.name, plant: p.plant, role: (p.role === 'SA' ? '服專' : '出納') + '｜' + p.status, k, a: p.ch[k][0], b: p.ch[k][1] })));
     L.plants.forEach((p) => Object.keys(p.ch).forEach((k) => rows.push({ name: '（廠別）', plant: p.plant, role: '廠', k, a: p.ch[k][0], b: p.ch[k][1] })));
-    L.direct.forEach((p) => Object.keys(p.ch).forEach((k) => rows.push({ name: p.name, plant: p.plant, role: '月度' + L.month, k, a: p.ch[k][0], b: p.ch[k][1] })));
+    L.added.forEach((p) => rows.push({ name: p.name, plant: p.plant, role: (p.role === 'SA' ? '服專' : '出納') + '｜' + p.status, k: '新增列', a: null, b: '新增' }));
     const v = (x) => x == null ? '—' : typeof x === 'number' ? (Math.abs(x) < 10 && x % 1 ? x.toFixed(4) : (Math.round(x * 100) / 100).toLocaleString()) : String(x);
     UI.modal('逐人異動明細（' + rows.length + ' 項）', '<div class="card-h" style="padding:0 0 8px;border:0"><div class="tools">' + UI.exportBtns('ud') + '</div></div><div id="udt"></div>', (b) => {
-      const t = table(b.querySelector('#udt'), { columns: [{ key: 'role', label: '層級' }, { key: 'plant', label: '廠別' }, { key: 'name', label: '人員' }, { key: 'k', label: '欄位' }, { key: 'a', label: '更正前', fmt: v }, { key: 'b', label: '更正後', fmt: v }], rows, short: true });
+      const t = table(b.querySelector('#udt'), { columns: [{ key: 'role', label: '層級' }, { key: 'plant', label: '廠別' }, { key: 'name', label: '人員／月份' }, { key: 'k', label: '欄位' }, { key: 'a', label: '前版', fmt: v }, { key: 'b', label: '本版', fmt: v }], rows, short: true });
       UI.bindExport(b, 'ud', '本次更新異動明細', t);
     });
   }
@@ -273,14 +280,16 @@
     const sumM = (arr, k) => sum(arr.map((r) => r[k] || 0));
     add('管理總覽', '現行服專人數', ref['現行服專人數'], sum(roster.map((r) => r.saCount || 0)));
     add('管理總覽', '現行出納人數', ref['現行出納人數'], sum(roster.map((r) => r.caCount || 0)), '服務廠量能已排除撫遠鈑噴廠（名冊3人）');
-    add('管理總覽', '1–8月全體接車台數', ref['1–8月全體接車台數'], sumM(S.model.saMonthly, 'cars'));
-    add('管理總覽', '1–8月全體服專業績', ref['1–8月全體服專業績'], sumM(S.model.saMonthly, 'revenue'));
-    add('管理總覽', '1–8月全體結帳工單', ref['1–8月全體結帳工單'], sumM(S.model.caMonthly, 'orders'));
+    const rk = (re) => Object.keys(ref).find((k) => re.test(k));
+    const kc = rk(/接車(台數|合計)/), kr = rk(/服專業績/), ko = rk(/結帳(工單|合計)/);
+    if (kc) add('管理總覽', kc, ref[kc], sumM(S.model.saMonthly, 'cars'));
+    if (kr) add('管理總覽', kr, ref[kr], sumM(S.model.saMonthly, 'revenue'));
+    if (ko) add('管理總覽', ko, ref[ko], sumM(S.model.caMonthly, 'orders'));
     add('管理總覽', '服專高量人數(PR≥75%)', ref['服專高量人數(PR≥75%)'], sa.filter((p) => p.prVolume >= T.highVolumePR).length);
-    add('管理總覽', '服專高量需改善', ref['服專高量需改善'], sa.filter((p) => p.personType === '高量需改善').length);
+    add('管理總覽', '服專高量需改善', ref['服專高量需改善'], sa.filter((p) => p.highVolNeed).length);
     add('管理總覽', '出納高量人數(PR≥75%)', ref['出納高量人數(PR≥75%)'], ca.filter((p) => p.prVolume >= T.highVolumePR).length);
-    add('管理總覽', '出納高量需改善', ref['出納高量需改善'], ca.filter((p) => p.personType === '高量需改善').length);
-    add('管理總覽', '115.9出納0人據點', ref['115.9出納0人據點'], roster.filter((r) => r.saCount > 0 && r.caCount === 0).length);
+    add('管理總覽', '出納高量需改善', ref['出納高量需改善'], ca.filter((p) => p.highVolNeed).length);
+    const kz = Object.keys(ref).find((k) => /出納0人據點/.test(k)); if (kz) add('管理總覽', kz, ref[kz], roster.filter((r) => r.caCount === 0).length);
     (S.model.overviewMonthly || []).forEach((m) => {
       add('月度推移', m.month + ' 接車台數', m.cars, sumM(S.model.saMonthly.filter((r) => r.month === m.month), 'cars'));
       add('月度推移', m.month + ' 服專業績', m.revenue, sumM(S.model.saMonthly.filter((r) => r.month === m.month), 'revenue'));

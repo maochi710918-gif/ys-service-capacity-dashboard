@@ -9,6 +9,7 @@ for(const role of ['SA','CA']){
  for(const p of people[role]){
   for(const k of Object.values(map)){
    if(['plant','name','license','years','status','position','advice'].includes(k))continue;
+   const H=(model.headers||{})[role==='SA'?'服專總覽':'出納總覽'];if(H&&!H[k])continue;
    const ex=p.excel[k], me=p[k];checked++;
    let ok;
    if(ex==null) ok = (me==null) || (typeof me==='number' && k.match(/^(total|ng|key)/) && me===0);

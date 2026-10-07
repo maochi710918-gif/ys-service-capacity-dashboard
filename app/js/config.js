@@ -39,7 +39,9 @@
       highPower: 70,
       midPower: 50,
       // 綜合戰力計算所需最低資料完整度（Excel 未明文；依現有結果反推：<50% 者未計分）
-      scoreMinCompleteness: 0.5,
+      scoreMinCompleteness: 0,
+      // 1–9月版 Excel：所有戰力構面皆可計算才計分（不以部分構面重配權重）
+      requireAllDims: true,
       // 升階準備度：資料完整度不足（Excel 公式 AG<70%）
       promoMinCompleteness: 0.7,
       // 升階準備度（Excel 服專 AS／出納 AF 公式）
@@ -52,6 +54,8 @@
       },
       // 高量能（Excel 管理總覽：PR≥75%）
       highVolumePR: 0.75,
+      // 高量需改善：量能PR ≥ highVolumePR 且 服務品質PR < 此值（Excel 未列公式，依其人數反推：服專4、出納4 一致）
+      highVolNeedQualityPR: 0.50,
       // 異常判斷
       lowQualityPR: 0.40,          // 服務品質PR低於此值視為品質偏低
       goodQualityPR: 0.70,         // 服務品質PR高於此值視為品質佳
@@ -71,6 +75,8 @@
       completenessGreen: 0.90,
       completenessYellow: 0.70
     },
+
+    labels: { noReview: '不盤點／資料不足' },
 
     /* ---------- 排除於服務廠管理指標之據點（保留於後台資料層供稽核） ---------- */
     excludedPlants: ['撫遠鈑噴廠', '撫遠廠', '未辨識'],
@@ -118,13 +124,14 @@
       card: '感心卡推廣與服務關懷執行'
     },
 
-    /* ---------- 人員類型（Excel 管理總覽，依管理建議首句） ---------- */
-    personTypes: [
-      { type: '核心穩定', match: '可作標竿與帶訓人選' },
-      { type: '量質平衡', match: '維持穩定，聚焦一項可放大的優勢' },
-      { type: '高量需改善', match: '先查負荷與流程風險' },
-      { type: '品質佳／量能未釋放', match: '品質基礎佳' },
-      { type: '優先輔導', match: '拆解量能與品質短板' }
+    /* ---------- 人員類型（1–9月版 Excel 管理總覽「現職人才類型」：依人才類型分組） ---------- */
+    personGroups: [
+      { type: '核心／帶訓', talents: ['核心／帶訓'] },
+      { type: '升階候選', talents: ['升階候選'] },
+      { type: '高潛力新星', talents: ['高潛力新星'] },
+      { type: '資深穩定／穩定成長', talents: ['資深穩定', '穩定成長'] },
+      { type: '輔導／落差／基礎養成', talents: ['重點輔導', '資深戰力落差', '基礎養成'], coach: true },
+      { type: '加速培育／資料不足', talents: ['加速培育', '不盤點／資料不足', '資料不足'] }
     ],
 
     /* ---------- 權限（系統角色） ---------- */
@@ -140,7 +147,7 @@
   /* ---------- Excel 欄位對應表（工作表 → 欄位名稱 → 系統欄位） ---------- */
   const FIELD_MAP = {
     '服專總覽': {
-      role: 'SA', headerKey: '廠別', required: ['廠別', '姓名', '證照', '年資', '有效月份', '累積接車台數', '人員狀態'],
+      role: 'SA', headerKey: '廠別', required: ['廠別', '姓名', '證照', '年資', '累積接車台數', '人員狀態'],
       cols: {
         '廠別': 'plant', '姓名': 'name', '證照': 'license', '年資': 'years', '有效月份': 'validMonths',
         '累積接車台數': 'totalCars', '月均接車台數': 'avgCars', '累積業績': 'totalRevenue', '月均業績': 'avgRevenue',
@@ -157,7 +164,7 @@
       }
     },
     '出納總覽': {
-      role: 'CA', headerKey: '廠別', required: ['廠別', '姓名', '證照', '年資', '有效月份', '累積結帳工單', '人員狀態'],
+      role: 'CA', headerKey: '廠別', required: ['廠別', '姓名', '證照', '年資', '累積結帳工單', '人員狀態'],
       cols: {
         '廠別': 'plant', '姓名': 'name', '證照': 'license', '年資': 'years', '有效月份': 'validMonths',
         '累積結帳工單': 'totalOrders', '月均結帳工單': 'avgOrders', '電子簽名率': 'esign', '感心卡核卡(平均)': 'card',
@@ -214,13 +221,27 @@
     }
   };
 
+  /* 欄位別名／新增欄位（新版 Excel 改名或新增時，舊版欄位仍可讀） */
+  const FIELD_ALIASES = {
+    '服專總覽': { '任職／實績月數': 'employMonths', '>3且<8年佔比': 'age38', '≥8年佔比': 'age8', '自費鈑噴營收達成率': 'bodyPaint', 'CSI均值差(6–8比3–5月)': 'trendCsi',
+      '到職日': 'hireDate', '平均計算依據': 'avgBasis', '資料涵蓋月份': 'coverage', '已知任職月數': 'knownMonths', '接車有效月份': 'carMonths', '業績有效月份': 'revMonths', 'CSI有效月份': 'csiMonths', '盤點資料狀態': 'reviewStatus' },
+    '出納總覽': { '任職／實績月數': 'employMonths', '月平均電子簽名率': 'esign', 'CSI均值差(6–8比3–5月)': 'trendCsi',
+      '到職日': 'hireDate', '平均計算依據': 'avgBasis', '資料涵蓋月份': 'coverage', '已知任職月數': 'knownMonths', '結帳有效月份': 'orderMonths', 'CSI有效月份': 'csiMonths', '盤點資料狀態': 'reviewStatus', '9月電子簽名率': 'esignLast' },
+    '服專月度明細': { '>3且<8年台數': 'cars38', '≥8年台數': 'cars8', '自費鈑噴營收達成率': 'bodyPaint', 'APP指定次數': 'appCount', 'APP同來源接車數': 'appBase', '跨廠支援／實際分布': 'support',
+      '廠工作天數': 'workdays', '日均接車(廠工作日)': 'daily', '標準量能達成率': 'capRate', '資料涵蓋說明': 'coverNote', '任職月份旗標': 'employedFlag', '業績來源廠別': 'revPlant' },
+    '出納月度明細': { '跨廠支援／實際分布': 'support', '廠工作天數': 'workdays', '日均結帳(廠工作日)': 'daily', '標準量能達成率': 'capRate', '資料涵蓋說明': 'coverNote', '任職月份旗標': 'employedFlag', '9月電子簽名數': 'esignCount', '9月簽名對象數': 'esignBase' },
+    '服務廠量能': { '9月營收目標(元)': 'revTarget', '9月營收實績(元)': 'revActual', '9月營收達成率': 'revRate', '9月廠工作天數': 'workdays', '9月去重接車台數': 'carsDedup', '9月去重結帳工單': 'ordersDedup',
+      '8–9月累積廠營收目標': 'cumTarget', '8–9月累積廠營收實績': 'cumActual', '8–9月累積達成率': 'cumRate', '廠营收資料涵蓋': 'revNote', '廠營收資料涵蓋': 'revNote' },
+    '廠別月度量能': { '廠營收目標(元)': 'revTarget', '廠營收實績(元)': 'revActual', '廠營收達成率': 'revRate', '廠工作天數': 'workdays', '跨服專重複數': 'dupSA', '跨出納重複數': 'dupCA', '日均接車(廠工作日)': 'dailyCars', '日均結帳(廠工作日)': 'dailyOrders', '來源說明': 'note', 'APP指定次數': 'appCount', 'APP同來源接車數': 'appBase' }
+  };
+
   // 月度明細需計入「資料完整度」的欄位（Excel：服專13項、出納9項／月）
   const COMPLETENESS_FIELDS = {
     SA: ['revenue', 'cars', 'app', 'a1', 'a2', 'bodyPaint', 'csi', 'csiFirst', 'esSelf', 'esRedesignate', 'ngFee', 'ngTime', 'keyUnlock'],
     CA: ['orders', 'esign', 'card', 'csi', 'csiFirst', 'esSelf', 'plantCsiSample', 'ngFee', 'keyUnlock']
   };
 
-  const api = { DEFAULT_CONFIG, FIELD_MAP, COMPLETENESS_FIELDS };
+  const api = { DEFAULT_CONFIG, FIELD_MAP, FIELD_ALIASES, COMPLETENESS_FIELDS };
   root.APP_CONFIG = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

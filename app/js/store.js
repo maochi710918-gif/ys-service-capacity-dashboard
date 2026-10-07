@@ -198,7 +198,7 @@
     const names = []; const seen = {};
     const push = (n) => { if (n && !seen[n]) { seen[n] = 1; names.push(n); } };
     (S.model.plants || []).forEach((r) => push(r.plant));
-    D.P.SA.concat(D.P.CA).forEach((p) => push(p.plant));
+    if (!(S.model.plants || []).length) D.P.SA.concat(D.P.CA).forEach((p) => push(p.plant));
     const EX = S.cfg.excludedPlants || [];
     for (let i = names.length - 1; i >= 0; i--) if (EX.indexOf(names[i]) >= 0) names.splice(i, 1);
     const T = S.cfg.thresholds;
@@ -215,7 +215,8 @@
         caAvgOrders: mean(ca.map((p) => p.avgOrders)), esign: mean(ca.map((p) => p.esign)), caCsi: mean(ca.map((p) => p.csi)), caPower: mean(ca.map((p) => p.power)),
         high: sa.concat(ca).filter((p) => nn(p.power) && p.power >= T.highPower).length,
         saHigh: sa.filter((p) => nn(p.power) && p.power >= T.highPower).length, caHigh: ca.filter((p) => nn(p.power) && p.power >= T.highPower).length,
-        coach: sa.concat(ca).filter((p) => p.personType === '優先輔導').length,
+        coach: sa.concat(ca).filter((p) => p.coach).length,
+        revTarget: ro.revTarget, revActual: ro.revActual, revRate: ro.revRate, cumTarget: ro.cumTarget, cumActual: ro.cumActual, cumRate: ro.cumRate, workdays: ro.workdays,
         saPeople: sa, caPeople: ca, excelNote: ro.note || ''
       };
       return o;
@@ -227,17 +228,19 @@
       saAvgCars: mean(all.SA.map((p) => p.avgCars)), saAvgRevenue: mean(all.SA.map((p) => p.avgRevenue)), saPerCar: mean(all.SA.map((p) => p.perCar)),
       app: mean(all.SA.map((p) => p.app)), saCsi: mean(all.SA.map((p) => p.csi)), saPower: mean(all.SA.map((p) => p.power)),
       caAvgOrders: mean(all.CA.map((p) => p.avgOrders)), esign: mean(all.CA.map((p) => p.esign)), caCsi: mean(all.CA.map((p) => p.csi)), caPower: mean(all.CA.map((p) => p.power)),
-      high: mean(rows.map((r) => r.high)), coach: mean(rows.map((r) => r.coach))
+      high: mean(rows.map((r) => r.high)), coach: mean(rows.map((r) => r.coach)), capacityRate: mean(all.SA.map((p) => p.capacityRate)),
+      revRate: (() => { const t = sum(rows.map((r) => r.revTarget || 0)); return t ? sum(rows.map((r) => r.revActual || 0)) / t : null; })(),
+      cumRate: (() => { const t = sum(rows.map((r) => r.cumTarget || 0)); return t ? sum(rows.map((r) => r.cumActual || 0)) / t : null; })()
     };
     rows.forEach((r) => {
       const notes = [];
-      if (r.saCount > 0 && r.caCount === 0) notes.push('出納0人');
+      if (r.caCount === 0) notes.push('出納0人');
       if (r.caCount > 0 && r.saCount === 0) notes.push('無服專（' + (r.plant.indexOf('鈑噴') >= 0 ? '鈑噴據點' : '需確認') + '）');
       if (nn(r.saAvgCars) && nn(avg.saAvgCars) && r.saAvgCars > avg.saAvgCars * T.loadHighRatio) notes.push('服專人均負荷偏高');
       if (nn(r.caAvgOrders) && nn(avg.caAvgOrders) && r.caAvgOrders > avg.caAvgOrders * T.loadHighRatio) notes.push('出納人均負荷偏高');
       if (r.plant === '未辨識') notes.push('來源廠別未辨識');
       r.note = notes.join('；');
-      r.light = r.saCount > 0 && r.caCount === 0 ? 'red' : notes.length ? 'yellow' : 'green';
+      r.light = r.caCount === 0 ? 'red' : notes.length ? 'yellow' : 'green';
     });
     return { rows, avg };
   }
@@ -246,7 +249,8 @@
   function options(P) {
     const all = P.SA.concat(P.CA);
     const uniq = (f) => Array.from(new Set(all.map(f).filter((v) => nn(v) && v !== ''))).sort((a, b) => String(a).localeCompare(String(b), 'zh-Hant'));
-    const plants = Array.from(new Set((S.model.plants || []).map((r) => r.plant).concat(all.map((p) => p.plant)))).filter((p) => p && (S.cfg.excludedPlants || []).indexOf(p) < 0);
+    const roster = (S.model.plants || []).map((r) => r.plant);
+    const plants = Array.from(new Set(roster.length ? roster : all.map((p) => p.plant))).filter((p) => p && (S.cfg.excludedPlants || []).indexOf(p) < 0);
     return {
       plants, licenses: uniq((p) => p.license), positions: uniq((p) => p.position), statuses: uniq((p) => p.status),
       promos: uniq((p) => p.promotion), talents: S.cfg.grid.maturities.flatMap((m) => S.cfg.grid.types[m]).concat(['資料不足']),

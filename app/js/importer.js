@@ -22,7 +22,9 @@
     const header = rows[hIdx].map(clean);
     const colIndex = {};
     const mapClean = {};
+    const aliases = (CFG.FIELD_ALIASES || {})[sheetName] || {};
     Object.keys(spec.cols).forEach((k) => { mapClean[clean(k)] = spec.cols[k]; });
+    Object.keys(aliases).forEach((k) => { mapClean[clean(k)] = aliases[k]; });
     header.forEach((h, i) => { if (h && mapClean[h] && colIndex[mapClean[h]] === undefined) colIndex[mapClean[h]] = i; });
     // 必要欄位
     spec.required.forEach((req) => {
@@ -32,6 +34,10 @@
     Object.keys(spec.cols).forEach((k) => {
       if (colIndex[spec.cols[k]] === undefined && spec.required.indexOf(k) < 0) report.warnings.push({ sheet: sheetName, msg: '欄位「' + k.replace(/\n/g, '') + '」未找到，該指標將顯示「資料未提供」' });
     });
+    // 記錄實際表頭名稱（供畫面欄名與欄位存在判斷）
+    report.headers = report.headers || {};
+    const hm = report.headers[sheetName] = {};
+    rows[hIdx].forEach((h, i) => { const k = mapClean[clean(h)]; if (k && colIndex[k] === i) hm[k] = String(h).replace(/\n/g, ''); });
     const out = [];
     for (let r = hIdx + 1; r < rows.length; r++) {
       const row = rows[r];
@@ -198,7 +204,7 @@
     const model = {
       meta: { fileName: fileName || '', importedAt: new Date().toISOString(), note: overview ? overview.note : '', months },
       saPeople, caPeople, saMonthly, caMonthly, plants, plantMonthly, checks, definitions, sources,
-      excelWeights: weights, gridRef, overviewRef: overview ? overview.ref : {}, overviewMonthly: overview ? overview.monthly : [], plantMismatch: mismatch
+      headers: report.headers || {}, excelWeights: weights, gridRef, overviewRef: overview ? overview.ref : {}, overviewMonthly: overview ? overview.monthly : [], plantMismatch: mismatch
     };
     return { model, report };
   }

@@ -31,7 +31,12 @@
   const isNum = (k) => fmtOf(k) !== F.text;
   const LABELS = {};
   ['服專總覽', '出納總覽'].forEach((sh) => { const m = APP_CONFIG.FIELD_MAP[sh].cols; Object.keys(m).forEach((h) => { LABELS[(sh === '服專總覽' ? 'SA' : 'CA') + ':' + m[h]] = h.replace(/\n/g, ''); }); });
-  const label = (role, k) => LABELS[role + ':' + k] || k;
+  const SHEET = { SA: '服專總覽', CA: '出納總覽' };
+  const hdr = (role) => ((S.model && S.model.headers) || {})[SHEET[role]] || null;
+  const label = (role, k) => (hdr(role) && hdr(role)[k]) || LABELS[role + ':' + k] || k;
+  // 新版 Excel 追加欄位（存在才顯示），放在管理建議之後
+  const EXTRA_KEYS = ['employMonths', 'knownMonths', 'carMonths', 'revMonths', 'orderMonths', 'csiMonths', 'esignLast', 'hireDate', 'avgBasis', 'coverage', 'reviewStatus'];
+  const fmtDate = (v) => { if (!nn(v) || v === '') return '—'; const d = new Date(v); return isNaN(d) ? String(v) : d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0'); };
   const roleName = (r) => r === 'SA' ? '服專' : '出納';
   const roleOn = (r) => S.role === 'all' || S.role === r;
   const current = (list) => list.filter((p) => p.status === '現行');
@@ -51,7 +56,11 @@
   function personColumns(role, opts) {
     opts = opts || {};
     const map = APP_CONFIG.FIELD_MAP[role === 'SA' ? '服專總覽' : '出納總覽'].cols;
-    const keys = Object.values(map);
+    const H = hdr(role);
+    let keys = Object.values(map);
+    if (H) keys = keys.filter((k) => H[k] || k === 'name' || k === 'plant').concat(EXTRA_KEYS.filter((k) => H[k]));
+    // 「任職／實績月數」放在原「有效月份」位置
+    if (H && H.employMonths && !H.validMonths) { keys = keys.filter((k) => k !== 'employMonths'); keys.splice(4, 0, 'employMonths'); }
     return keys.map((k) => {
       const c = { key: k, label: label(role, k), num: isNum(k), fmt: fmtOf(k), cls: (r, v) => colorCell(k, v) };
       if (k === 'name') { c.sticky = true; c.html = (r) => UI.nameLink(r); }
@@ -59,6 +68,11 @@
       if (k === 'promotion') c.html = (r, v) => UI.pill(v, promoColor(v));
       if (k === 'advice') c.wrap = true;
       if (k === 'years') c.fmt = F.d1;
+      if (k === 'employMonths' || /Months$/.test(k)) { c.num = true; c.fmt = F.int; }
+      if (k === 'hireDate') { c.get = (r) => r.excel && r.excel.hireDate; c.fmt = fmtDate; c.num = false; }
+      if (['avgBasis', 'coverage', 'reviewStatus', 'knownMonths', 'carMonths', 'revMonths', 'orderMonths', 'csiMonths', 'esignLast'].indexOf(k) >= 0 && !c.get) c.get = (r) => r.excel ? r.excel[k] : null;
+      if (k === 'esignLast') c.fmt = F.pct;
+      if (k === 'avgBasis' || k === 'coverage') { c.wrap = true; c.fmt = F.text; c.num = false; }
       return c;
     }).concat(opts.extra || []);
   }
@@ -121,11 +135,11 @@
     const prev = D.Pprev ? { SA: current(D.Pprev.SA.filter((p) => Store.personPass(p))), CA: current(D.Pprev.CA.filter((p) => Store.personPass(p))) } : null;
     const snapLbl = { curLabel: '截至' + D.months[D.months.length - 1].slice(5) + '月', prevLabel: D.prevMonths.length ? '截至' + D.prevMonths[D.prevMonths.length - 1].slice(5) + '月' : '上期' };
     const hi = (l) => l.filter((p) => nn(p.power) && p.power >= T.highPower).length;
-    const coach = (l) => l.filter((p) => p.personType === '優先輔導').length;
+    const coach = (l) => l.filter((p) => p.coach).length;
     const cars = colSum(D.monthly.SA, 'cars'), rev = colSum(D.monthly.SA, 'revenue'), ord = colSum(D.monthly.CA, 'orders');
     const coCars = colSum(CO.monthly.SA, 'cars'), coRev = colSum(CO.monthly.SA, 'revenue'), coOrd = colSum(CO.monthly.CA, 'orders');
     const saN = sum(plants.rows.map((r) => r.saCount)), caN = sum(plants.rows.map((r) => r.caCount));
-    const zeroCa = plants.rows.filter((r) => r.saCount > 0 && r.caCount === 0);
+    const zeroCa = plants.rows.filter((r) => r.caCount === 0);
     const comp = (l) => mean(l.map((p) => p.completeness));
     const roles = ['SA', 'CA'].filter(roleOn);
     const scopeCur = roles.flatMap((r) => current(D.people[r]));
@@ -142,9 +156,9 @@
     push('CA', Object.assign({ label: '出納平均綜合戰力', value: mean(ca.map((p) => p.power)), fmt: F.score, unit: '分', cur: mean(ca.map((p) => p.power)), prev: prev ? mean(prev.CA.map((p) => p.power)) : null, company: mean(coCa.map((p) => p.power)) }, snapLbl));
     push('SA', Object.assign({ label: '服專高戰力人數', value: hi(sa), unit: '人', cur: hi(sa), prev: prev ? hi(prev.SA) : null, company: hi(coSa), hint: '綜合戰力 ≥ ' + T.highPower }, snapLbl));
     push('CA', Object.assign({ label: '出納高戰力人數', value: hi(ca), unit: '人', cur: hi(ca), prev: prev ? hi(prev.CA) : null, company: hi(coCa) }, snapLbl));
-    push('SA', Object.assign({ label: '服專優先輔導人數', value: coach(sa), unit: '人', cur: coach(sa), prev: prev ? coach(prev.SA) : null, company: coach(coSa), goodDir: -1, hint: '依 Excel 管理總覽「人員類型＝優先輔導」', light: coach(sa) ? 'yellow' : 'green' }, snapLbl));
-    push('CA', Object.assign({ label: '出納優先輔導人數', value: coach(ca), unit: '人', cur: coach(ca), prev: prev ? coach(prev.CA) : null, company: coach(coCa), goodDir: -1, light: coach(ca) ? 'yellow' : 'green' }, snapLbl));
-    push('CA', { label: '出納0人據點數', value: zeroCa.length, unit: '處', cur: zeroCa.length, curLabel: '115.9名冊', prev: null, company: coPlants.rows.filter((r) => r.saCount > 0 && r.caCount === 0).length, goodDir: -1, light: zeroCa.length ? 'red' : 'green', hint: zeroCa.map((r) => r.plant).join('、') });
+    push('SA', Object.assign({ label: '服專輔導／落差／基礎養成', value: coach(sa), unit: '人', cur: coach(sa), prev: prev ? coach(prev.SA) : null, company: coach(coSa), goodDir: -1, hint: '人才類型屬 重點輔導／資深戰力落差／基礎養成（Excel 管理總覽「輔導／落差／基礎養成」）', light: coach(sa) ? 'yellow' : 'green' }, snapLbl));
+    push('CA', Object.assign({ label: '出納輔導／落差／基礎養成', value: coach(ca), unit: '人', cur: coach(ca), prev: prev ? coach(prev.CA) : null, company: coach(coCa), goodDir: -1, light: coach(ca) ? 'yellow' : 'green' }, snapLbl));
+    push('CA', { label: '出納0人據點數', value: zeroCa.length, unit: '處', cur: zeroCa.length, curLabel: '115.9名冊', prev: null, company: coPlants.rows.filter((r) => r.caCount === 0).length, goodDir: -1, light: zeroCa.length ? 'red' : 'green', hint: zeroCa.map((r) => r.plant).join('、') });
     const lastM = D.months[D.months.length - 1];
     const compMonth = (m) => { if (!m) return null; let c = 0, n = 0; roles.forEach((r) => { const Fd = APP_CONFIG.COMPLETENESS_FIELDS[r]; D.monthlyAllMonths[r].filter((x) => x.month === m && x.status === '現行').forEach((x) => { Fd.forEach((f) => { n++; if (nn(x[f])) c++; }); }); }); return n ? c / n : null; };
     const pm = Store.allMonths()[Store.allMonths().indexOf(lastM) - 1];
@@ -178,8 +192,8 @@
       card('每月量能與流程指標', '<div class="chips-sel" id="trendSel"></div><div class="chart tall" id="trendChart"></div>', { sub: '依當月實際廠別彙整；' + Store.monthLabel(D.months), tools: '' }) +
       '<div class="section-title">管理提醒</div><div class="alerts" id="alerts">' +
       AL.map((a, i) => '<div class="alert ' + (a.n ? '' : 'zero') + '" data-i="' + i + '"><div class="a-n" style="color:var(--' + (a.lv === 'red' ? 'bad' : a.lv === 'yellow' ? 'warn' : a.lv === 'blue' ? 'info' : 'muted') + ')">' + a.n + '</div><div><div class="a-t">' + esc(a.t) + '</div><div class="a-d">' + esc(a.d) + '</div></div></div>').join('') + '</div>' +
-      '<div class="section-title">人員類型分布（依 Excel 管理總覽口徑）</div><div class="grid g2">' +
-      card('人員類型', '<div class="chart short" id="ptChart"></div>') +
+      '<div class="section-title">現職人才類型分布（依 Excel 管理總覽口徑）</div><div class="grid g2">' +
+      card('現職人才類型（分組）', '<div class="chart short" id="ptChart"></div>') +
       card('人才九宮格摘要', '<div class="chart short" id="ttChart"></div>', { tools: '<a class="btn sm" href="#/grid">前往九宮格 →</a>' }) + '</div>';
 
     // 趨勢圖
@@ -215,8 +229,8 @@
     }));
 
     // 人員類型
-    const types = ['核心穩定', '量質平衡', '高量需改善', '品質佳／量能未釋放', '優先輔導', '其他/資料不足'];
-    const cnt = (l, t) => l.filter((p) => p.personType === t).length + (t === '其他/資料不足' && l === ca && !D.pfa ? Math.max(0, caN - ca.length) : 0);
+    const types = S.cfg.personGroups.map((g) => g.type);
+    const cnt = (l, t) => l.filter((p) => p.personType === t).length;
     chart(el.querySelector('#ptChart'), {
       color: [C.navy, C.red], tooltip: { trigger: 'axis' }, legend: { data: ['服專', '出納'].filter((r, i) => roleOn(['SA', 'CA'][i])) }, grid: { left: 118, right: 20, top: 28, bottom: 20 },
       xAxis: { type: 'value', minInterval: 1 }, yAxis: { type: 'category', data: types.slice().reverse() },
@@ -258,7 +272,8 @@
       col('saAvgCars', '服專月均接車台數', F.int, 'SA'), col('capacityRate', '廠別量能達成', F.pct2, 'SA'), col('saAvgRevenue', '服專月均業績', F.money, 'SA'), col('saPerCar', '服專單車產值', F.money, 'SA'),
       col('app', 'APP預約指定率', F.pct2, 'SA'), col('saCsi', '服專CSI', F.csi, 'SA'), col('saPower', '服專平均綜合戰力', F.score, 'SA'),
       col('caAvgOrders', '出納月均結帳工單', F.int, 'CA'), col('esign', '電子簽名率', F.pct, 'CA'), col('caCsi', '出納CSI', F.csi, 'CA'), col('caPower', '出納平均綜合戰力', F.score, 'CA'),
-      col('high', '高戰力人數', F.int), col('coach', '優先輔導人數', F.int, null, -1),
+      col('revRate', '9月廠營收達成率', F.pct2), col('cumRate', '8–9月累積營收達成', F.pct2),
+      col('high', '高戰力人數', F.int), col('coach', '輔導／落差／基礎養成', F.int, null, -1),
       { key: 'note', label: '配置提醒', html: (r) => r === avg ? '' : (r.note ? UI.pill(r.note, r.light === 'red' ? 'red' : 'yellow') : UI.pill('正常', 'green')) }
     ].filter((c) => !c.role || roleOn(c.role));
     // 排名依綜合戰力（依角色）
@@ -335,7 +350,7 @@
     const per100 = (r, k, base) => { const b = colSum(r, base), n = colSum(r, k); return b && nn(n) ? n / b * 100 : null; };
     const hi = (l) => l.filter((p) => nn(p.power) && p.power >= T.highPower).length;
     const cand = (l) => l.filter((p) => /候選/.test(p.promotion)).length;
-    const coach = (l) => l.filter((p) => p.personType === '優先輔導').length;
+    const coach = (l) => l.filter((p) => p.coach).length;
     const out = [];
     const M = (o, fn) => out.push(kpi(Object.assign(o, kpiMonthly(D, role, fn))));
     const P = (o, fn) => out.push(kpi(Object.assign(o, { cur: fn(cur), prev: prevL ? fn(prevL) : null, company: fn(co) }, snap)));
@@ -346,9 +361,9 @@
       M({ label: '月均接車台數（人均）', value: pm(cur, 'avgCars'), fmt: F.int, unit: '台', company: pm(co, 'avgCars') }, (r) => colMean(r, 'cars'));
       M({ label: '累積業績', value: colSum(rows, 'revenue'), fmt: F.money, unit: '元', company: colSum(coRows, 'revenue') }, (r) => colSum(r, 'revenue'));
       M({ label: '月均業績（人均）', value: pm(cur, 'avgRevenue'), fmt: F.money, unit: '元', company: pm(co, 'avgRevenue') }, (r) => colMean(r, 'revenue'));
-      out.push(kpi({ label: '接車量能達成率', value: pm(cur, 'capacityRate'), fmt: F.pct2, light: nn(pm(cur, 'capacityRate')) ? 'blue' : 'gray', cur: pm(cur, 'capacityRate'), curLabel: '期間', company: pm(co, 'capacityRate'), hint: '接車台數 ÷（工作日 × ' + S.cfg.capacity.perDay + ' 台）；需於設定頁填入各月工作日，未填顯示「—」' }));
+      out.push(kpi({ label: '接車量能達成率', value: pm(cur, 'capacityRate'), fmt: F.pct2, light: nn(pm(cur, 'capacityRate')) ? 'blue' : 'gray', cur: pm(cur, 'capacityRate'), curLabel: (() => { const ms = Array.from(new Set(S.model.saMonthly.filter((r) => r.workdays > 0 && D.months.indexOf(r.month) >= 0).map((r) => r.month))).sort(); return ms.length ? '計算月份 ' + ms.map((m) => Number(m.slice(5))).join('、') + '月' : '無工作日資料'; })(), company: pm(co, 'capacityRate'), hint: '接車台數 ÷（工作日 × ' + S.cfg.capacity.perDay + ' 台）；需於設定頁填入各月工作日，未填顯示「—」' }));
       M({ label: '單車產值', value: colSum(rows, 'cars') ? colSum(rows, 'revenue') / colSum(rows, 'cars') : null, fmt: F.money, unit: '元', company: colSum(coRows, 'cars') ? colSum(coRows, 'revenue') / colSum(coRows, 'cars') : null, hint: '業績合計 ÷ 接車合計' }, (r) => { const c = colSum(r, 'cars'); return c ? colSum(r, 'revenue') / c : null; });
-      [['app', 'APP預約指定率', F.pct2], ['a1', 'A1準時定保達成', F.pct2], ['a2', 'A2準時定保達成', F.pct2], ['bodyPaint', '自費鈑噴達成', F.pct2], ['csi', 'CSI滿意度', F.csi], ['csiFirst', 'CSI首回滿意度', F.csi], ['esSelf', 'ES自主滿意度', F.csi], ['esRedesignate', 'ES服專再指定率', F.pct]].forEach(([k, l, f]) =>
+      [['app', 'APP預約指定率', F.pct2], ['a1', 'A1準時定保達成', F.pct2], ['a2', 'A2準時定保達成', F.pct2], ['bodyPaint', '自費鈑噴營收達成率', F.pct2], ['csi', 'CSI滿意度', F.csi], ['csiFirst', 'CSI首回滿意度', F.csi], ['esSelf', 'ES自主滿意度', F.csi], ['esRedesignate', 'ES服專再指定率', F.pct]].forEach(([k, l, f]) =>
         M({ label: l, value: pm(cur, k), fmt: f, company: pm(co, k), deltaFmt: f === F.pct || f === F.pct2 ? (v) => (v * 100).toFixed(2) + 'pp' : F.d1 }, (r) => colMean(r, k)));
       [['ngFee', '每100台收費解說NG'], ['ngTime', '每100台時間管理NG'], ['keyUnlock', '每100台解金鑰']].forEach(([k, l]) =>
         M({ label: l, value: per100(rows, k, 'cars'), fmt: F.d2, goodDir: -1, company: per100(coRows, k, 'cars'), hint: '合計次數 ÷ 接車台數 × 100，越少越好' }, (r) => per100(r, k, 'cars')));
@@ -364,8 +379,8 @@
     P({ label: '平均綜合戰力', value: pm(cur, 'power'), fmt: F.score, unit: '分', hint: '管理診斷指標，非正式考核分數' }, (l) => pm(l, 'power'));
     P({ label: '高戰力人數', value: hi(cur), unit: '人' }, hi);
     P({ label: '升階候選人數', value: cand(cur), unit: '人', hint: '升階準備度含「候選」者' }, cand);
-    P({ label: '優先輔導人數', value: coach(cur), unit: '人', goodDir: -1, light: coach(cur) ? 'yellow' : 'green' }, coach);
-    if (role === 'CA') { const z = plants.filter((r) => r.saCount > 0 && r.caCount === 0); out.push(kpi({ label: '出納0人據點', value: z.length, unit: '處', cur: z.length, curLabel: '115.9名冊', light: z.length ? 'red' : 'green', goodDir: -1, hint: z.map((r) => r.plant).join('、') })); }
+    P({ label: '輔導／落差／基礎養成人數', value: coach(cur), unit: '人', goodDir: -1, light: coach(cur) ? 'yellow' : 'green' }, coach);
+    if (role === 'CA') { const z = plants.filter((r) => r.caCount === 0); out.push(kpi({ label: '出納0人據點', value: z.length, unit: '處', cur: z.length, curLabel: '115.9名冊', light: z.length ? 'red' : 'green', goodDir: -1, hint: z.map((r) => r.plant).join('、') })); }
     return out;
   }
 

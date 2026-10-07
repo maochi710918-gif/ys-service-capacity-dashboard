@@ -10,7 +10,7 @@
   const METRICS = {
     SA: [
       ['avgCars', '月均接車台數', F.int, 1], ['capacityRate', '接車量能達成率', F.pct2, 1], ['avgRevenue', '月均業績', F.money, 1], ['perCar', '單車產值', F.money, 1], ['app', 'APP預約指定', F.pct2, 1],
-      ['a1', 'A1準時定保達成', F.pct2, 1], ['a2', 'A2準時定保達成', F.pct2, 1], ['bodyPaint', '自費鈑噴達成', F.pct2, 1], ['csi', 'CSI滿意度', F.csi, 1],
+      ['a1', 'A1準時定保達成', F.pct2, 1], ['a2', 'A2準時定保達成', F.pct2, 1], ['bodyPaint', '自費鈑噴營收達成率', F.pct2, 1], ['csi', 'CSI滿意度', F.csi, 1],
       ['csiFirst', 'CSI首回滿意度', F.csi, 1], ['esSelf', 'ES自主滿意度', F.csi, 1], ['esRedesignate', 'ES服專再指定', F.pct, 1],
       ['ngFeePer100', '每100台收費NG', F.d2, -1], ['ngTimePer100', '每100台時間NG', F.d2, -1], ['keyPer100', '每100台解金鑰', F.d2, -1], ['power', '綜合戰力指數', F.score, 1]
     ],
@@ -22,7 +22,7 @@
   // 月度指標：agg = sum（可加總）| mean（比率）| ratio（業績/接車）
   const MMET = {
     SA: [['revenue', '個人業績', F.money, 'sum'], ['cars', '接車台數', F.int, 'sum'], ['perCar', '單車產值', F.money, 'ratio'], ['age', '車齡結構', F.pct, 'age'], ['app', 'APP預約指定', F.pct2, 'mean'],
-      ['a1', 'A1準時定保達成', F.pct2, 'mean'], ['a2', 'A2準時定保達成', F.pct2, 'mean'], ['bodyPaint', '自費鈑噴達成', F.pct2, 'mean'], ['csi', 'CSI滿意度', F.csi, 'mean'], ['csiFirst', 'CSI首回滿意度', F.csi, 'mean'],
+      ['a1', 'A1準時定保達成', F.pct2, 'mean'], ['a2', 'A2準時定保達成', F.pct2, 'mean'], ['bodyPaint', '自費鈑噴營收達成率', F.pct2, 'mean'], ['csi', 'CSI滿意度', F.csi, 'mean'], ['csiFirst', 'CSI首回滿意度', F.csi, 'mean'],
       ['esSelf', 'ES自主滿意度', F.csi, 'mean'], ['esRedesignate', 'ES服專再指定', F.pct, 'mean'], ['ngFee', '收費解說NG', F.int, 'sum'], ['ngTime', '時間管理NG', F.int, 'sum'], ['keyUnlock', '解金鑰次數', F.int, 'sum']],
     CA: [['orders', '結帳工單數', F.int, 'sum'], ['esign', '電子簽名率', F.pct, 'mean'], ['card', '感心卡核卡', F.d2, 'mean'], ['csi', 'CSI滿意度', F.csi, 'mean'], ['csiFirst', 'CSI首回滿意度', F.csi, 'mean'],
       ['esSelf', 'ES自主滿意度', F.csi, 'mean'], ['plantCsiSample', '所屬廠CSI樣本達成率', F.pct, 'mean'], ['ngFee', '收費解說NG', F.int, 'sum'], ['keyUnlock', '解金鑰次數', F.int, 'sum']]
@@ -145,9 +145,9 @@
       const share = (l) => { const c = sum(l.map((x) => x.totalCars || 0)); return c ? [sum(l.map((x) => x.cars3 || 0)) / c, sum(l.map((x) => x.cars38 || 0)) / c, sum(l.map((x) => x.cars8 || 0)) / c, sum(l.map((x) => x.carsAgeMissing || 0)) / c] : [null, null, null, null]; };
       const cats = ['本人', '所屬廠', '全公司']; const vs = [share([p]), share(grp.plant), share(grp.company)];
       chart(el.querySelector('#r5'), {
-        color: [C.sky, C.navy2, C.navy, C.gray], tooltip: { trigger: 'axis', valueFormatter: (v) => nn(v) ? v.toFixed(1) + '%' : '—' }, legend: { data: ['3年內', '3–8年', '8年以上', '車齡缺漏'] }, grid: { left: 60, right: 20, top: 30, bottom: 24 },
+        color: [C.sky, C.navy2, C.navy, C.gray], tooltip: { trigger: 'axis', valueFormatter: (v) => nn(v) ? v.toFixed(1) + '%' : '—' }, legend: { data: ['3年內', '>3且<8年', '≥8年', '車齡缺漏'] }, grid: { left: 60, right: 20, top: 30, bottom: 24 },
         xAxis: { type: 'value', max: 100, axisLabel: { formatter: '{value}%' } }, yAxis: { type: 'category', data: cats },
-        series: ['3年內', '3–8年', '8年以上', '車齡缺漏'].map((n, i) => ({ name: n, type: 'bar', stack: 's', barMaxWidth: 22, data: vs.map((v) => nn(v[i]) ? +(v[i] * 100).toFixed(1) : null), label: { show: true, formatter: (x) => x.value >= 8 ? x.value.toFixed(0) + '%' : '', color: i >= 1 && i < 3 ? '#fff' : '#111', fontSize: 10 } }))
+        series: ['3年內', '>3且<8年', '≥8年', '車齡缺漏'].map((n, i) => ({ name: n, type: 'bar', stack: 's', barMaxWidth: 22, data: vs.map((v) => nn(v[i]) ? +(v[i] * 100).toFixed(1) : null), label: { show: true, formatter: (x) => x.value >= 8 ? x.value.toFixed(0) + '%' : '', color: i >= 1 && i < 3 ? '#fff' : '#111', fontSize: 10 } }))
       });
     }
     const pts = all.filter((x) => nn(x.prVolume) && nn(x.prService));
@@ -232,9 +232,9 @@
     const tf = (v) => nn(v) ? ((m[2] === F.pct || m[2] === F.pct2) ? +(v * 100).toFixed(2) : +(+v).toFixed(2)) : null;
     const xs = series.map((s) => s.k);
     if (m[3] === 'age') {
-      chart(el.querySelector('#mc'), { color: [C.sky, C.navy2, C.navy, C.gray], tooltip: { trigger: 'axis', valueFormatter: (v) => nn(v) ? v.toFixed(1) + '%' : '—' }, legend: { data: ['3年內', '3–8年', '8年以上', '車齡缺漏'] },
+      chart(el.querySelector('#mc'), { color: [C.sky, C.navy2, C.navy, C.gray], tooltip: { trigger: 'axis', valueFormatter: (v) => nn(v) ? v.toFixed(1) + '%' : '—' }, legend: { data: ['3年內', '>3且<8年', '≥8年', '車齡缺漏'] },
         xAxis: { type: 'category', data: xs }, yAxis: { type: 'value', max: 100, axisLabel: { formatter: '{value}%' } },
-        series: [['3年內', 'a3'], ['3–8年', 'a38'], ['8年以上', 'a8'], ['車齡缺漏', 'miss']].map(([n, k]) => ({ name: n, type: 'bar', stack: 's', barMaxWidth: 36, data: series.map((s) => nn(s[k]) ? +(s[k] * 100).toFixed(1) : null) })) });
+        series: [['3年內', 'a3'], ['>3且<8年', 'a38'], ['≥8年', 'a8'], ['車齡缺漏', 'miss']].map(([n, k]) => ({ name: n, type: 'bar', stack: 's', barMaxWidth: 36, data: series.map((s) => nn(s[k]) ? +(s[k] * 100).toFixed(1) : null) })) });
     } else {
       const ser = [{ name: who ? '本人' : m[1], type: m[3] === 'sum' ? 'bar' : 'line', data: series.map((s) => tf(s.v)), barMaxWidth: 34, symbolSize: 8, itemStyle: { color: who ? C.red : C.navy } }];
       if (who) ser.push({ name: '所屬廠平均', type: 'line', data: series.map((s) => tf(s.plantAvg)), lineStyle: { type: 'dashed' }, itemStyle: { color: C.navy2 } }, { name: '全公司平均', type: 'line', data: series.map((s) => tf(s.coAvg)), lineStyle: { type: 'dotted' }, itemStyle: { color: C.gray } });
@@ -242,7 +242,7 @@
       chart(el.querySelector('#mc'), { tooltip: { trigger: 'axis' }, legend: { data: ser.map((s) => s.name) }, xAxis: { type: 'category', data: xs }, yAxis: { type: 'value', scale: m[3] !== 'sum', name: (m[2] === F.pct || m[2] === F.pct2) ? '%' : '' }, series: ser });
     }
     const cols = m[3] === 'age' ? [
-      { key: 'k', label: '期間' }, { key: 'c', label: '接車台數', num: true, fmt: F.int }, { key: 'a3', label: '3年內', num: true, fmt: F.pct }, { key: 'a38', label: '3–8年', num: true, fmt: F.pct }, { key: 'a8', label: '8年以上', num: true, fmt: F.pct }, { key: 'miss', label: '車齡缺漏', num: true, fmt: F.pct }
+      { key: 'k', label: '期間' }, { key: 'c', label: '接車台數', num: true, fmt: F.int }, { key: 'a3', label: '3年內', num: true, fmt: F.pct }, { key: 'a38', label: '>3且<8年', num: true, fmt: F.pct }, { key: 'a8', label: '≥8年', num: true, fmt: F.pct }, { key: 'miss', label: '車齡缺漏', num: true, fmt: F.pct }
     ] : [
       { key: 'k', label: '期間' }, { key: 'v', label: m[1], num: true, fmt: m[2] }, { key: 'mom', label: '期增減率', num: true, fmt: F.pctSigned, cls: (r, v) => nn(v) ? (v >= 0 ? 'cell-good' : 'cell-bad') : '' },
       m[3] === 'sum' ? { key: 'cum', label: '累積值', num: true, fmt: m[2] } : null, { key: 'ma', label: '3期移動平均', num: true, fmt: m[2] },
@@ -266,21 +266,21 @@
     rows.forEach((r) => { const k = r.actualPlant; const o = byPlant[k] = byPlant[k] || { plant: k, c: 0, c3: 0, c38: 0, c8: 0, rev: 0, bp: [] }; o.c += r.cars || 0; o.c3 += r.cars3 || 0; o.c38 += r.cars38 || 0; o.c8 += r.cars8 || 0; o.rev += r.revenue || 0; if (nn(r.bodyPaint)) o.bp.push(r.bodyPaint); });
     const plants = Object.values(byPlant).filter((o) => o.c > 0 && (S.cfg.excludedPlants || []).indexOf(o.plant) < 0).map((o) => Object.assign(o, { a3: o.c3 / o.c, a38: o.c38 / o.c, a8: o.c8 / o.c, miss: (o.c - o.c3 - o.c38 - o.c8) / o.c, perCar: o.rev / o.c, bodyPaint: mean(o.bp) })).sort((a, b) => b.a8 - a.a8);
     const people = current(D.people.SA).filter((p) => p.totalCars > 0);
-    el.innerHTML = '<div class="page-head"><div><h1>車齡結構分析（服專）</h1><p>依 070 進廠日車齡：3年內／3–8年／8年以上 ÷ 總接車台數。</p></div></div>' +
+    el.innerHTML = '<div class="page-head"><div><h1>車齡結構分析（服專）</h1><p>依 070 進廠日車齡：3年內／>3且<8年／≥8年 ÷ 總接車台數。</p></div></div>' +
       '<div class="banner info"><b>判讀原則</b><span>車齡結構僅作為服務複雜度與客群背景，<b>不得直接判定為績效好壞</b>。</span></div>' +
-      '<div class="kpis">' + [['3年內', c3], ['3–8年', c38], ['8年以上', c8], ['車齡資料缺漏', cm]].map(([l, v]) => kpi({ label: l + '接車台數', value: v, unit: '台', cur: sh(v), curLabel: '占比', curFmt: F.pct, fmt: F.int, light: l === '車齡資料缺漏' ? (sh(v) > 0.1 ? 'yellow' : 'green') : 'blue', prev: null, prevLabel: '上期' })).join('') +
+      '<div class="kpis">' + [['3年內', c3], ['>3且<8年', c38], ['≥8年', c8], ['車齡資料缺漏', cm]].map(([l, v]) => kpi({ label: l + '接車台數', value: v, unit: '台', cur: sh(v), curLabel: '占比', curFmt: F.pct, fmt: F.int, light: l === '車齡資料缺漏' ? (sh(v) > 0.1 ? 'yellow' : 'green') : 'blue', prev: null, prevLabel: '上期' })).join('') +
       kpi({ label: '車齡資料完整度', value: tc ? (c3 + c38 + c8) / tc : null, fmt: F.pct0, light: 'blue' }) + '</div>' +
       '<div class="grid g2" style="margin-top:12px">' +
-      card('各服務廠車齡結構', '<div class="chart tall" id="a1"></div>', { sub: '依當月實際廠別；依8年以上占比排序' }) +
-      card('各服專車齡結構', '<div class="chart tall" id="a2"></div>', { sub: '現行服專；依8年以上占比排序' }) +
-      card('車齡結構 × 單車產值', '<div class="chart" id="a3"></div>', { sub: 'X＝8年以上占比；Y＝單車產值（個人）' }) +
-      card('車齡結構 × 自費鈑噴達成', '<div class="chart" id="a4"></div>', { sub: 'X＝8年以上占比；Y＝自費鈑噴達成' }) + '</div>' +
+      card('各服務廠車齡結構', '<div class="chart tall" id="a1"></div>', { sub: '依當月實際廠別；依≥8年占比排序' }) +
+      card('各服專車齡結構', '<div class="chart tall" id="a2"></div>', { sub: '現行服專；依≥8年占比排序' }) +
+      card('車齡結構 × 單車產值', '<div class="chart" id="a3"></div>', { sub: 'X＝≥8年占比；Y＝單車產值（個人）' }) +
+      card('車齡結構 × 自費鈑噴營收達成率', '<div class="chart" id="a4"></div>', { sub: 'X＝≥8年占比；Y＝自費鈑噴營收達成率' }) + '</div>' +
       '<div style="height:12px"></div>' + card('服專車齡明細', '<div id="at"></div>', { flush: true, tools: UI.exportBtns('at') });
     const stack = (id, cats, data) => chart(el.querySelector(id), {
-      color: [C.sky, C.navy2, C.navy, C.gray], tooltip: { trigger: 'axis', valueFormatter: (v) => nn(v) ? v.toFixed(1) + '%' : '—' }, legend: { data: ['3年內', '3–8年', '8年以上', '缺漏'] }, grid: { left: 70, right: 20, top: 30, bottom: 24 },
+      color: [C.sky, C.navy2, C.navy, C.gray], tooltip: { trigger: 'axis', valueFormatter: (v) => nn(v) ? v.toFixed(1) + '%' : '—' }, legend: { data: ['3年內', '>3且<8年', '≥8年', '缺漏'] }, grid: { left: 70, right: 20, top: 30, bottom: 24 },
       xAxis: { type: 'value', max: 100, axisLabel: { formatter: '{value}%' } }, yAxis: { type: 'category', data: cats.slice().reverse(), axisLabel: { fontSize: 10.5 } },
       dataZoom: cats.length > 18 ? [{ type: 'slider', yAxisIndex: 0, right: 0, width: 12, start: 0, end: Math.min(100, 1800 / cats.length) }] : undefined,
-      series: [['3年內', 'a3'], ['3–8年', 'a38'], ['8年以上', 'a8'], ['缺漏', 'miss']].map(([n, k]) => ({ name: n, type: 'bar', stack: 's', barMaxWidth: 14, data: data.map((o) => nn(o[k]) ? +(o[k] * 100).toFixed(1) : null).reverse() }))
+      series: [['3年內', 'a3'], ['>3且<8年', 'a38'], ['≥8年', 'a8'], ['缺漏', 'miss']].map(([n, k]) => ({ name: n, type: 'bar', stack: 's', barMaxWidth: 14, data: data.map((o) => nn(o[k]) ? +(o[k] * 100).toFixed(1) : null).reverse() }))
     });
     stack('#a1', plants.map((o) => o.plant), plants);
     const ps = people.slice().sort((a, b) => (b.age8 || 0) - (a.age8 || 0)).map((p) => ({ n: p.name, a3: p.age3, a38: p.age38, a8: p.age8, miss: nn(p.ageComplete) ? 1 - p.ageComplete : null }));
@@ -292,15 +292,15 @@
       const r = pts.length > 2 ? sum(xs.map((x, i) => (x - mx) * (ys[i] - my))) / Math.sqrt(sum(xs.map((x) => (x - mx) ** 2)) * sum(ys.map((y) => (y - my) ** 2))) : null;
       chart(el.querySelector(id), {
         title: { text: '相關係數 r = ' + (nn(r) ? r.toFixed(2) : '—'), right: 10, top: 0, textStyle: { fontSize: 11, color: '#6b7280', fontWeight: 'normal' } },
-        tooltip: { trigger: 'item', formatter: (x) => x.data.n + '<br>8年以上 ' + (x.data.value[0] * 100).toFixed(1) + '%<br>' + yn + ' ' + fy(x.data.value[1]) }, grid: { left: 64, right: 24, bottom: 44 },
-        xAxis: { type: 'value', name: '8年以上占比', nameLocation: 'middle', nameGap: 26, scale: true, axisLabel: { formatter: (v) => (v * 100).toFixed(0) + '%' } }, yAxis: { type: 'value', name: yn, scale: true, axisLabel: { formatter: (v) => yk === 'bodyPaint' ? (v * 100).toFixed(0) + '%' : v.toLocaleString() } },
+        tooltip: { trigger: 'item', formatter: (x) => x.data.n + '<br>≥8年 ' + (x.data.value[0] * 100).toFixed(1) + '%<br>' + yn + ' ' + fy(x.data.value[1]) }, grid: { left: 64, right: 24, bottom: 44 },
+        xAxis: { type: 'value', name: '≥8年占比', nameLocation: 'middle', nameGap: 26, scale: true, axisLabel: { formatter: (v) => (v * 100).toFixed(0) + '%' } }, yAxis: { type: 'value', name: yn, scale: true, axisLabel: { formatter: (v) => yk === 'bodyPaint' ? (v * 100).toFixed(0) + '%' : v.toLocaleString() } },
         series: [{ type: 'scatter', symbolSize: 10, itemStyle: { color: C.navy, opacity: .8 }, data: pts.map((p) => ({ n: p.name, value: [p.age8, p[yk]] })) }]
       });
     };
-    sc('#a3', 'perCar', '單車產值', F.money); sc('#a4', 'bodyPaint', '自費鈑噴達成', F.pct);
+    sc('#a3', 'perCar', '單車產值', F.money); sc('#a4', 'bodyPaint', '自費鈑噴營收達成率', F.pct);
     const t = table(el.querySelector('#at'), {
-      columns: [{ key: 'plant', label: '廠別' }, { key: 'name', label: '姓名', html: (p) => UI.nameLink(p) }, { key: 'license', label: '證照' }, { key: 'totalCars', label: '累積接車', num: true, fmt: F.int }, { key: 'cars3', label: '3年內台數', num: true, fmt: F.int }, { key: 'cars38', label: '3–8年台數', num: true, fmt: F.int }, { key: 'cars8', label: '8年以上台數', num: true, fmt: F.int }, { key: 'carsAgeMissing', label: '缺漏台數', num: true, fmt: F.int },
-        { key: 'age3', label: '3年內占比', num: true, fmt: F.pct }, { key: 'age38', label: '3–8年占比', num: true, fmt: F.pct }, { key: 'age8', label: '8年以上占比', num: true, fmt: F.pct }, { key: 'ageComplete', label: '車齡資料完整度', num: true, fmt: F.pct0 }, { key: 'perCar', label: '單車產值', num: true, fmt: F.money }, { key: 'bodyPaint', label: '自費鈑噴達成', num: true, fmt: F.pct2 }],
+      columns: [{ key: 'plant', label: '廠別' }, { key: 'name', label: '姓名', html: (p) => UI.nameLink(p) }, { key: 'license', label: '證照' }, { key: 'totalCars', label: '累積接車', num: true, fmt: F.int }, { key: 'cars3', label: '3年內台數', num: true, fmt: F.int }, { key: 'cars38', label: '>3且<8年台數', num: true, fmt: F.int }, { key: 'cars8', label: '≥8年台數', num: true, fmt: F.int }, { key: 'carsAgeMissing', label: '缺漏台數', num: true, fmt: F.int },
+        { key: 'age3', label: '3年內占比', num: true, fmt: F.pct }, { key: 'age38', label: '＞3且＜8年占比', num: true, fmt: F.pct }, { key: 'age8', label: '≥8年占比', num: true, fmt: F.pct }, { key: 'ageComplete', label: '車齡資料完整度', num: true, fmt: F.pct0 }, { key: 'perCar', label: '單車產值', num: true, fmt: F.money }, { key: 'bodyPaint', label: '自費鈑噴營收達成率', num: true, fmt: F.pct2 }],
       rows: people, sortKey: 'age8', onRow: (p) => root.App.openPerson(p.id)
     });
     UI.bindExport(el, 'at', '服專車齡結構', t);
