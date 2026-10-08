@@ -114,7 +114,7 @@
       const sec = document.createElement('div');
       sec.innerHTML = '<div class="section-title">⑤ 服專定保保留率（CY25 → CY26）</div><div class="grid g2b">' +
         card('各廠定保保留率', '<div id="bt7"></div>', { flush: true, sub: '範圍廠別加權 ' + F.pct2(coR), tools: '<a class="btn sm" href="#/retention">完整分析 →</a>' }) +
-        card('保留率 NG 服專（較所屬廠低 3pp 以上）', '<div id="bt8"></div>', { flush: true, sub: ng.length + ' 列' + (cst ? '｜CRM 查詢（' + esc(RX.coverage(cr).plants.join('、')) + '）可聯繫待追蹤 ' + cst.follow + ' 位' : '') }) + '</div>';
+        card('保留率 NG 服專（較所屬廠低 3pp 以上）', '<div id="bt8"></div>', { flush: true, sub: ng.length + ' 列' + (cst ? '｜久未回廠客戶 ' + cst.total.toLocaleString() + ' 位、可聯繫待追蹤 ' + cst.follow.toLocaleString() + ' 位' : '') }) + '</div>';
       el.appendChild(sec);
       table(sec.querySelector('#bt7'), {
         columns: [{ key: 'rk', label: '名次', num: true, get: (p) => pl.indexOf(p) + 1, html: (p) => '<b>' + medal(pl.indexOf(p) + 1) + '</b>' }, { key: 'plant', label: '服務廠', html: (p) => '<b>' + esc(p.plant) + '</b>' },

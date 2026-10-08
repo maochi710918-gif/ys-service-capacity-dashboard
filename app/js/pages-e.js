@@ -1,8 +1,7 @@
 /* =========================================================================
- * 頁面 E：顧客保留率（CRM 查詢結果，去識別化）
- *  保留＝最近回廠距查詢日 ≤ retention.days（預設365天）；
- *  流失風險＝ riskDays < 未回廠天數 ≤ days；已流失＝ > days。
- *  資料涵蓋範圍依 CRM 查詢條件（目前：新店廠 B17），不納入綜合戰力。
+ * 頁面 E：顧客保留率
+ *  ① 服專定保保留率（接待保留率.xlsx）
+ *  ② CRM 久未回廠客戶名單（去識別化；名單本身即為久未回廠者，不計算保留率）
  * ========================================================================= */
 (function (root) {
   const { Store, UI, Engine, PX } = root; const S = Store.S;
@@ -17,17 +16,12 @@
   function saveCrm(d) { try { localStorage.setItem(LS_KEY, JSON.stringify(d)); return true; } catch (e) { return false; } }
   function resetCrm() { try { localStorage.removeItem(LS_KEY); } catch (e) { } }
   const R = () => S.cfg.retention;
-  const state = (c) => !nn(c.days) ? '無資料' : c.days <= R().riskDays ? '保留' : c.days <= R().days ? '流失風險' : '已流失';
+  const state = () => '久未回';
   const contactable = (c) => c.consent === '同意使用個資' && c.dnd !== '是';
   function stats(list) {
-    const n = list.filter((c) => nn(c.days)).length;
-    const kept = list.filter((c) => nn(c.days) && c.days <= R().days).length;
-    const risk = list.filter((c) => state(c) === '流失風險').length, lost = list.filter((c) => state(c) === '已流失').length;
-    const pm = list.filter((c) => c.type === '定保UIO'), pmN = pm.filter((c) => nn(c.days)).length;
-    return { n, total: list.length, kept, rate: n ? kept / n : null, risk, lost, riskRate: n ? risk / n : null,
-      pmRate: pmN ? pm.filter((c) => c.days <= R().days).length / pmN : null, pmShare: list.length ? pm.length / list.length : null,
-      low: list.length ? list.filter((c) => c.freq === '低頻').length / list.length : null,
-      follow: list.filter((c) => state(c) !== '保留' && contactable(c)).length, avgDays: Engine.mean(list.map((c) => c.days)) };
+    const pm = list.filter((c) => c.type === '定保UIO').length, follow = list.filter(contactable).length;
+    return { total: list.length, follow, pm, pmShare: list.length ? pm / list.length : null, avgDays: Engine.mean(list.map((c) => c.days)),
+      noConsent: list.filter((c) => c.consent !== '同意使用個資').length, dndN: list.filter((c) => c.dnd === '是').length, over: list.filter((c) => nn(c.days) && c.days > R().days).length };
   }
   function scoped(D) {
     const d = crm(); if (!d) return null;
@@ -83,7 +77,7 @@
 
   Pages.retention = function (el, D) {
     const d = ret();
-    el.innerHTML = '<div class="page-head"><div><h1>顧客保留率</h1><p>① 服專定保保留率（全公司｜' + esc(d ? d.meta.base : '') + '）　② CRM 久未回廠追蹤（查詢範圍）</p></div></div><div id="retA"></div><div class="section-title">② CRM 查詢結果：未回廠追蹤</div><div id="retB"></div>';
+    el.innerHTML = '<div class="page-head"><div><h1>顧客保留率</h1><p>① 服專定保保留率（全公司｜' + esc(d ? d.meta.base : '') + '）　② 久未回廠客戶追蹤（全廠 CRM 名單）</p></div></div><div id="retA"></div><div class="section-title">② 久未回廠客戶追蹤（CRM，去識別化）</div><div id="retB"></div>';
     retSection(el.querySelector('#retA'), D);
     crmSection(el.querySelector('#retB'), D);
   };
@@ -162,69 +156,75 @@
 
   function crmSection(el, D) {
     const d = scoped(D);
-    if (!d) { el.innerHTML = '<div class="banner info"><b>尚無 CRM 資料</b><span>請由「資料匯入」上傳 CRM 查詢結果（去識別化）。</span></div>'; return; }
-    const T = R(), cov = coverage(d), st = stats(d.rows), co = stats(d.all);
-    const people = D.P.SA;
-    const byAdv = {}; d.rows.forEach((c) => { (byAdv[c.advisor || '（未指定）'] = byAdv[c.advisor || '（未指定）'] || []).push(c); });
-    const advRows = Object.keys(byAdv).map((a) => { const p = people.find((x) => x.name === a); return Object.assign({ advisor: a, p, plantNow: p ? p.plant : null, status: p ? p.status : '名冊外' }, stats(byAdv[a])); });
-    const rateLight = (v) => !nn(v) ? 'gray' : v >= T.goodRate ? 'green' : v >= T.warnRate ? 'yellow' : 'red';
-    el.innerHTML = '<p class="note">資料：' + esc(d.meta.file) + '｜查詢日 ' + esc(d.meta.queryDate) + '｜去識別化 ' + co.total + ' 位客戶</p>' +
-      '<div class="banner warn"><b>資料範圍</b><span>本份 CRM 查詢涵蓋 <b>' + esc(cov.plants.join('、')) + '</b>、車型 <b>' + esc(cov.models.join('、')) + '</b>，僅代表此查詢條件之客戶，<b>不代表全公司或其他服務廠</b>；因此保留率不納入綜合戰力與跨廠排名。其他服務廠或車型請另匯入 CRM 查詢結果。</span></div>' +
-      '<div class="guide"><b>定義</b><span>保留＝最近回廠距查詢日 ≤ ' + T.days + ' 天</span><span>流失風險＝' + (T.riskDays + 1) + '–' + T.days + ' 天未回廠</span><span>已流失＝超過 ' + T.days + ' 天</span><span>可聯繫＝同意使用個資且非勿擾</span><span>燈號：≥' + F.pct(T.goodRate) + ' 綠、≥' + F.pct(T.warnRate) + ' 黃</span></div>' +
+    if (!d) { el.innerHTML = '<div class="banner info"><b>尚無久未回廠資料</b><span>請由「資料匯入」上傳 CRM 久未回廠查詢結果（去識別化）。</span></div>'; return; }
+    const st = stats(d.rows), co = stats(d.all);
+    const roster = (S.model.plants || []).map((r) => r.plant);
+    const known = new Set((S.model.saPeople || []).map((p) => p.name));
+    const days = d.all.map((c) => c.days).filter(nn);
+    // 服務廠
+    const byP = {}; d.rows.forEach((c) => { (byP[c.plant || '（未提供）'] = byP[c.plant || '（未提供）'] || []).push(c); });
+    const retPl = root.RETX.plantRet ? root.RETX.plantRet() : [];
+    const pRows = Object.keys(byP).map((pl) => { const r = retPl.find((x) => x.plant === pl); return Object.assign({ plant: pl, inScope: roster.indexOf(pl) >= 0, target: r ? r.target : null }, stats(byP[pl])); })
+      .map((o) => Object.assign(o, { per100: o.target ? o.total / o.target * 100 : null }));
+    const inP = pRows.filter((o) => o.inScope).sort((a, b) => b.total - a.total);
+    // 服專（僅服專總覽中之人員）
+    const byA = {}; d.rows.forEach((c) => { if (known.has(c.advisor)) (byA[c.advisor] = byA[c.advisor] || []).push(c); });
+    const aRows = Object.keys(byA).map((a) => { const p = D.P.SA.find((x) => x.name === a); const r = root.RETX.advisorRet ? root.RETX.advisorRet(a) : null;
+      return Object.assign({ advisor: a, p, plantNow: p ? p.plant : null, crmPlants: Array.from(new Set(byA[a].map((c) => c.plant))).join('、'), retRate: r ? r.rate : null, target: r ? r.target : null }, stats(byA[a])); })
+      .map((o) => Object.assign(o, { per100: o.target ? o.total / o.target * 100 : null }));
+    const unknownN = d.rows.filter((c) => !known.has(c.advisor)).length;
+    el.innerHTML = '<p class="note">資料：' + esc(d.meta.file) + '｜查詢日 ' + esc(d.meta.queryDate) + '｜去識別化 ' + co.total.toLocaleString() + ' 位久未回廠客戶（未回廠 ' + Math.min.apply(null, days) + '–' + Math.max.apply(null, days) + ' 天）</p>' +
+      '<div class="guide"><b>說明</b><span>本名單僅含「久未回廠」客戶（約一年以上未回廠），無母體，故不計算保留率；保留率請見上方「服專定保保留率」。</span><span>可聯繫＝同意使用個資且非勿擾</span><span>每百對象久未回＝久未回人數 ÷ 接待保留率 CY26 對象 × 100（不同來源，僅供參考）</span></div>' +
       '<div class="kpis">' +
-      kpi({ label: '客戶數', value: st.total, unit: '位', light: 'blue', cur: st.n, curLabel: '有回廠日期', company: co.total, companyLabel: '查詢全體' }) +
-      kpi({ label: '保留率', value: st.rate, fmt: F.pct, light: rateLight(st.rate), cur: st.kept, curFmt: F.int, curLabel: '保留客戶', company: co.rate, companyLabel: '查詢全體', hint: '最近回廠 ≤ ' + T.days + ' 天' }) +
-      kpi({ label: '定保客戶保留率', value: st.pmRate, fmt: F.pct, light: rateLight(st.pmRate), cur: st.pmShare, curFmt: F.pct, curLabel: '定保UIO占比', company: co.pmRate, companyLabel: '查詢全體' }) +
-      kpi({ label: '流失風險', value: st.risk, unit: '位', light: st.risk ? 'yellow' : 'green', cur: st.riskRate, curFmt: F.pct, curLabel: '占比', company: co.risk, companyLabel: '查詢全體', goodDir: -1, hint: (T.riskDays + 1) + '–' + T.days + ' 天未回廠' }) +
-      kpi({ label: '已流失', value: st.lost, unit: '位', light: st.lost ? 'red' : 'green', cur: st.n ? st.lost / st.n : null, curFmt: F.pct, curLabel: '占比', company: co.lost, companyLabel: '查詢全體', goodDir: -1 }) +
-      kpi({ label: '可聯繫待追蹤', value: st.follow, unit: '位', light: st.follow ? 'yellow' : 'green', cur: st.avgDays, curFmt: F.int, curLabel: '平均未回廠天數', company: co.follow, companyLabel: '查詢全體', hint: '流失風險＋已流失，且同意個資、非勿擾' }) +
-      '</div><div class="section-title">分布</div><div class="grid g2">' +
-      card('未回廠天數分布', '<div class="chart" id="rt1"></div>', { sub: '虛線＝風險 ' + T.riskDays + ' 天／流失 ' + T.days + ' 天' }) +
-      card('建議行動', '<div class="chart" id="rt2"></div>', { sub: 'CRM 系統建議' }) + '</div>' +
-      '<div class="section-title">服務專員保留率</div>' + card('依服務專員', '<div id="rt3"></div>', { flush: true, tools: UI.exportBtns('rt3'), sub: '客戶數少於 ' + T.minCustomers + ' 位者僅供參考；點列進入個人分析' }) +
-      '<div class="section-title">待追蹤客戶（去識別化）</div>' + card('流失風險與已流失客戶', '<div class="chips-sel" style="padding:10px 14px 0" id="rtf"></div><div id="rt4"></div>', { flush: true, tools: UI.exportBtns('rt4') });
+      kpi({ label: '久未回廠客戶', value: st.total, unit: '位', light: st.total ? 'yellow' : 'green', goodDir: -1, cur: st.avgDays, curFmt: F.int, curLabel: '平均未回廠天數', company: co.total, companyLabel: '查詢全體' }) +
+      kpi({ label: '可聯繫待追蹤', value: st.follow, unit: '位', light: 'blue', cur: st.total ? st.follow / st.total : null, curFmt: F.pct, curLabel: '占比', company: co.follow, companyLabel: '查詢全體' }) +
+      kpi({ label: '定保客戶', value: st.pm, unit: '位', light: 'blue', cur: st.pmShare, curFmt: F.pct, curLabel: '定保UIO占比', company: co.pm, companyLabel: '查詢全體' }) +
+      kpi({ label: '不可聯繫', value: st.total - st.follow, unit: '位', light: 'gray', cur: st.noConsent, curFmt: F.int, curLabel: '未同意個資', company: st.dndN, companyLabel: '勿擾', hint: '未同意個資或勿擾' }) +
+      kpi({ label: '超過一年', value: st.over, unit: '位', light: 'red', goodDir: -1, cur: st.total ? st.over / st.total : null, curFmt: F.pct, curLabel: '占比', company: co.over, companyLabel: '查詢全體', hint: '未回廠 > ' + R().days + ' 天' }) +
+      '</div><div class="grid g2b" style="margin-top:12px">' +
+      card('各服務廠久未回廠客戶', '<div class="chart tall" id="rt1"></div>', { sub: '深色＝可聯繫；淺色＝不可聯繫' }) +
+      card('服務廠明細', '<div id="rt2"></div>', { flush: true, tools: UI.exportBtns('rt2'), sub: '範圍外據點另列' }) + '</div><div style="height:12px"></div>' +
+      card('服務專員久未回廠客戶', '<div id="rt3"></div>', { flush: true, tools: UI.exportBtns('rt3'), sub: '依 CRM「服務專員」；僅列服專總覽中之人員' + (unknownN ? '（另 ' + unknownN + ' 位客戶之服專不在總覽，計入廠別但不列服專）' : '') }) +
+      '<div class="section-title">待追蹤客戶名單（去識別化）</div>' + card('久未回廠客戶', '<div class="chips-sel" style="padding:10px 14px 0" id="rtf"></div><div id="rt4"></div>', { flush: true, tools: UI.exportBtns('rt4') });
 
-    const bins = []; for (let b = 0; b < 450; b += 30) bins.push(b);
+    const cv = inP.slice().reverse();
     chart(el.querySelector('#rt1'), {
-      tooltip: { trigger: 'axis' }, grid: { left: 40, right: 16, top: 20, bottom: 40 },
-      xAxis: { type: 'category', data: bins.map((b) => b + '–' + (b + 29)), name: '天', axisLabel: { fontSize: 10, rotate: 30 } }, yAxis: { type: 'value', minInterval: 1, name: '位' },
-      series: [{ type: 'bar', barMaxWidth: 26, data: bins.map((b) => ({ value: d.rows.filter((c) => nn(c.days) && c.days >= b && c.days < b + 30).length, itemStyle: { color: b + 29 <= T.riskDays ? C.navy : b >= T.days ? C.red : '#d97706' } })),
-        markLine: { silent: true, symbol: 'none', lineStyle: { type: 'dashed', color: C.red }, label: { formatter: (x) => x.name, fontSize: 10 }, data: [{ name: '風險', xAxis: Math.floor(T.riskDays / 30) }, { name: '流失', xAxis: Math.floor(T.days / 30) }] } }]
+      color: [C.navy, '#cbd5e1'], tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, legend: { data: ['可聯繫', '不可聯繫'] }, grid: { left: 70, right: 30, top: 28, bottom: 20 },
+      xAxis: { type: 'value', minInterval: 1 }, yAxis: { type: 'category', data: cv.map((o) => o.plant) },
+      series: [{ name: '可聯繫', type: 'bar', stack: 's', barMaxWidth: 16, data: cv.map((o) => o.follow) }, { name: '不可聯繫', type: 'bar', stack: 's', barMaxWidth: 16, data: cv.map((o) => o.total - o.follow), label: { show: true, position: 'right', fontSize: 10, formatter: (x) => cv[x.dataIndex].total } }]
     });
-    const acts = {}; d.rows.forEach((c) => { const k = c.action || '（未提供）'; acts[k] = (acts[k] || 0) + 1; });
-    const ak = Object.keys(acts).sort((a, b) => acts[a] - acts[b]);
-    chart(el.querySelector('#rt2'), { tooltip: { trigger: 'axis' }, grid: { left: 190, right: 40, top: 10, bottom: 20 }, xAxis: { type: 'value', minInterval: 1 }, yAxis: { type: 'category', data: ak, axisLabel: { fontSize: 11 } },
-      series: [{ type: 'bar', barMaxWidth: 16, itemStyle: { color: C.navy2 }, data: ak.map((k) => acts[k]), label: { show: true, position: 'right', fontSize: 10 } }] });
-
+    const t2 = table(el.querySelector('#rt2'), {
+      columns: [{ key: 'plant', label: '服務廠', html: (o) => esc(o.plant) + (o.inScope ? '' : ' ' + UI.pill('範圍外', 'gray')) }, { key: 'total', label: '久未回', num: true, fmt: F.int }, { key: 'follow', label: '可聯繫', num: true, fmt: F.int },
+        { key: 'pm', label: '定保UIO', num: true, fmt: F.int }, { key: 'avgDays', label: '平均未回廠天數', num: true, fmt: F.int }, { key: 'per100', label: '每百對象久未回', num: true, fmt: F.d1 }],
+      rows: inP.concat(pRows.filter((o) => !o.inScope)), sortKey: 'total', short: true, onRow: (o) => { if (o.inScope) { S.filters.plant = o.plant; root.App.rerender(); } }
+    });
+    UI.bindExport(el, 'rt2', '久未回廠_服務廠', t2);
     const t3 = table(el.querySelector('#rt3'), {
-      columns: [{ key: 'advisor', label: '服務專員', html: (r) => r.p ? UI.nameLink(r.p) : esc(r.advisor) }, { key: 'status', label: '人員狀態', html: (r, v) => UI.pill(v, v === '現行' ? 'green' : v === '名冊外' ? 'gray' : 'blue') }, { key: 'plantNow', label: '最新廠別' },
-        { key: 'total', label: '客戶數', num: true }, { key: 'rate', label: '保留率', html: (r) => (r.total < T.minCustomers ? '<span class="note">' : '') + F.pct(r.rate) + (r.total < T.minCustomers ? '＊</span>' : ''), sortVal: (r) => r.rate, num: true, cls: (r) => r.total < T.minCustomers ? '' : rateLight(r.rate) === 'red' ? 'cell-bad' : rateLight(r.rate) === 'green' ? 'cell-good' : '' },
-        { key: 'pmRate', label: '定保客戶保留率', num: true, fmt: F.pct }, { key: 'risk', label: '流失風險', num: true }, { key: 'lost', label: '已流失', num: true, cls: (r, v) => v ? 'cell-bad' : '' },
-        { key: 'follow', label: '可聯繫待追蹤', num: true }, { key: 'pmShare', label: '定保UIO占比', num: true, fmt: F.pct }, { key: 'low', label: '低頻占比', num: true, fmt: F.pct }, { key: 'avgDays', label: '平均未回廠天數', num: true, fmt: F.int },
-        { key: 'power', label: '綜合戰力', num: true, get: (r) => r.p ? r.p.power : null, fmt: F.score }],
-      rows: advRows, sortKey: 'total', onRow: (r) => r.p && root.App.openPerson(r.p.id)
+      columns: [{ key: 'advisor', label: '服務專員', html: (r) => r.p ? UI.nameLink(r.p) : esc(r.advisor) }, { key: 'status', label: '人員狀態', get: (r) => r.p ? r.p.status : null, html: (r, v) => UI.pill(v || '—', v === '現行' ? 'green' : 'blue') },
+        { key: 'plantNow', label: '最新廠別' }, { key: 'crmPlants', label: 'CRM服務廠' }, { key: 'total', label: '久未回', num: true, fmt: F.int }, { key: 'follow', label: '可聯繫', num: true, fmt: F.int },
+        { key: 'pm', label: '定保UIO', num: true, fmt: F.int }, { key: 'avgDays', label: '平均未回廠天數', num: true, fmt: F.int }, { key: 'retRate', label: '服專定保保留率', num: true, fmt: F.pct2 },
+        { key: 'per100', label: '每百對象久未回', num: true, fmt: F.d1 }, { key: 'power', label: '綜合戰力', num: true, get: (r) => r.p ? r.p.power : null, fmt: F.score }],
+      rows: aRows, sortKey: 'total', short: true, onRow: (r) => r.p && root.App.openPerson(r.p.id)
     });
-    UI.bindExport(el, 'rt3', '服務專員保留率', t3);
+    UI.bindExport(el, 'rt3', '久未回廠_服務專員', t3);
 
-    let flt = '全部';
+    let flt = '可聯繫';
     const drawList = () => {
-      const base = d.rows.filter((c) => state(c) !== '保留');
-      const opts = ['全部', '可聯繫', '流失風險', '已流失'];
+      const opts = ['可聯繫', '全部', '定保UIO', '維修UIO', '不可聯繫'];
       el.querySelector('#rtf').innerHTML = opts.map((o) => '<button data-k="' + o + '" class="' + (o === flt ? 'on' : '') + '">' + o + '</button>').join('');
       el.querySelectorAll('#rtf button').forEach((b) => b.addEventListener('click', () => { flt = b.dataset.k; drawList(); }));
-      const l = base.filter((c) => flt === '全部' || (flt === '可聯繫' ? contactable(c) : state(c) === flt));
+      const l = d.rows.filter((c) => flt === '全部' || (flt === '可聯繫' ? contactable(c) : flt === '不可聯繫' ? !contactable(c) : c.type === flt));
       const t4 = table(el.querySelector('#rt4'), {
-        columns: [{ key: 'id', label: '識別碼' }, { key: 'advisor', label: '服務專員' }, { key: 'plant', label: '最近服務廠' }, { key: 'lastVisit', label: '最近回廠' }, { key: 'days', label: '未回廠天數', num: true, fmt: F.int },
-          { key: 'st', label: '狀態', get: (c) => state(c), html: (c) => UI.pill(state(c), state(c) === '已流失' ? 'red' : 'yellow') }, { key: 'type', label: '回廠類別' }, { key: 'freq', label: '定保頻率' },
-          { key: 'carAge', label: '車齡', num: true, fmt: F.d1 }, { key: 'mileage', label: '最新里程', num: true, fmt: F.int }, { key: 'contact', label: '可聯繫', get: (c) => contactable(c) ? '是' : '否' }, { key: 'action', label: '建議行動', wrap: true }],
+        columns: [{ key: 'id', label: '識別碼' }, { key: 'plant', label: '最近服務廠' }, { key: 'advisor', label: '服務專員' }, { key: 'lastVisit', label: '最近回廠' }, { key: 'days', label: '未回廠天數', num: true, fmt: F.int },
+          { key: 'type', label: '回廠類別' }, { key: 'freq', label: '定保頻率' }, { key: 'model', label: '車型' }, { key: 'carAge', label: '車齡', num: true, fmt: F.d1 }, { key: 'mileage', label: '最新里程', num: true, fmt: F.int },
+          { key: 'contact', label: '可聯繫', get: (c) => contactable(c) ? '是' : '否' }, { key: 'action', label: '建議行動', wrap: true }],
         rows: l, sortKey: 'days', short: true
       });
-      UI.bindExport(el, 'rt4', '待追蹤客戶', t4);
+      UI.bindExport(el, 'rt4', '久未回廠客戶', t4);
     };
     drawList();
-  };
+  }
 
-  /* 個人分析：服專顧客保留卡片 */
   root.retentionCard = function (p) {
     if (p.role !== 'SA') return '';
     let h = '';
@@ -236,12 +236,11 @@
     const d = crm(); if (!d) return '';
     const mine = d.rows.filter((c) => c.advisor === p.name);
     if (!mine.length) return '';
-    const s = stats(mine), co = stats(d.rows);
-    return '<div class="section-title">顧客保留（CRM｜' + esc(coverage({ all: d.rows }).plants.join('、')) + '｜查詢日 ' + esc(d.meta.queryDate) + '）</div>' +
-      card('本人客戶保留率（' + s.total + ' 位）', '<div class="kv" style="grid-template-columns:150px 1fr"><span>保留率</span><span><b>' + F.pct(s.rate) + '</b>（查詢全體 ' + F.pct(co.rate) + '）</span><span>定保客戶保留率</span><span>' + F.pct(s.pmRate) + '</span><span>流失風險／已流失</span><span>' + s.risk + '／' + s.lost + ' 位</span><span>可聯繫待追蹤</span><span>' + s.follow + ' 位</span><span>平均未回廠天數</span><span>' + F.int(s.avgDays) + ' 天</span></div><p class="note">CRM 查詢範圍限定，不納入綜合戰力。<a href="#/retention">查看顧客保留率頁 →</a></p>');
+    const s = stats(mine);
+    return '<div class="section-title">久未回廠客戶（CRM｜查詢日 ' + esc(d.meta.queryDate) + '）</div>' +
+      card('本人久未回廠客戶（' + s.total + ' 位）', '<div class="kv" style="grid-template-columns:150px 1fr"><span>可聯繫待追蹤</span><span><b>' + s.follow + '</b> 位</span><span>定保UIO</span><span>' + s.pm + ' 位</span><span>平均未回廠天數</span><span>' + F.int(s.avgDays) + ' 天</span><span>服務廠</span><span>' + esc(Array.from(new Set(mine.map((c) => c.plant))).join('、')) + '</span></div><p class="note"><a href="#/retention">查看待追蹤名單 →</a></p>');
   }
 
-  /* 資料匯入：CRM 區塊 */
   root.crmImportBlock = function (el) {
     const d = crm();
     const box = document.createElement('div');
