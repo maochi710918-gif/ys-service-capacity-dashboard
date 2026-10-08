@@ -44,9 +44,15 @@
 
   /* ======================= 服專定保保留率（接待保留率.xlsx） ======================= */
   const LS_RET = 'ys_dash_retention';
-  function ret() {
+  function retRaw() {
     try { const v = localStorage.getItem(LS_RET); if (v) return JSON.parse(v); } catch (e) { }
     return root.RETENTION_DATA || null;
+  }
+  // 只保留服專總覽中有此人者（總覽無此人之列不顯示、不計入人數與NG）
+  function ret() {
+    const d = retRaw(); if (!d) return null;
+    const known = new Set((S.model.saPeople || []).map((p) => p.name));
+    return Object.assign({}, d, { advisors: d.advisors.filter((a) => known.has(a.advisor)), excludedAdvisors: d.advisors.filter((a) => !known.has(a.advisor)).length });
   }
   const rosterPlants = () => (S.model.plants || []).map((r) => r.plant);
   // 服專跨廠合併：保留台數＝Σ(保留率×CY26對象)
@@ -105,7 +111,7 @@
       '</div><div class="grid g2b" style="margin-top:12px">' +
       card('各廠定保保留率', '<div class="chart tall" id="rp1"></div>', { sub: '虛線＝分析範圍廠別加權（依 CY26 對象）；灰色＝範圍外據點' }) +
       card('服務廠保留率', '<div id="rp2"></div>', { flush: true, tools: UI.exportBtns('rp2') }) + '</div><div style="height:12px"></div>' +
-      card('服專定保保留率明細', '<div id="rp3"></div>', { flush: true, tools: UI.exportBtns('rp3'), sub: '同一服專於多廠者分列；點姓名進入個人分析' });
+      card('服專定保保留率明細', '<div id="rp3"></div>', { flush: true, tools: UI.exportBtns('rp3'), sub: '僅列服專總覽中之人員' + (d.excludedAdvisors ? '（另 ' + d.excludedAdvisors + ' 列總覽無此人，已排除）' : '') + '；同一服專於多廠者分列；點姓名進入個人分析' });
     const rv = pls.slice().sort((a, b) => a.plantRate - b.plantRate);
     chart(el.querySelector('#rp1'), {
       tooltip: { trigger: 'axis', valueFormatter: (v) => nn(v) ? v.toFixed(2) + '%' : '—' }, grid: { left: 70, right: 40, top: 10, bottom: 24 },
@@ -115,13 +121,13 @@
     });
     const t2 = table(el.querySelector('#rp2'), {
       columns: [{ key: 'rk', label: '名次', num: true, get: (p) => p.inScope ? inPl.indexOf(p) + 1 : null }, { key: 'plant', label: '服務廠', html: (p) => esc(p.plant) + (p.inScope ? '' : ' ' + UI.pill('範圍外', 'gray')) }, { key: 'dealer', label: '經銷商' },
-        { key: 'plantRate', label: '廠定保保留率', num: true, fmt: F.pct2, cls: (p, v) => nn(coRate) && p.inScope ? (v >= coRate ? 'cell-good' : 'cell-bad') : '' }, { key: 'advRate', label: '服專列合計保留率', num: true, fmt: F.pct2 },
+        { key: 'plantRate', label: '廠定保保留率', num: true, fmt: F.pct2, cls: (p, v) => nn(coRate) && p.inScope ? (v >= coRate ? 'cell-good' : 'cell-bad') : '' },
         { key: 'target', label: 'CY26對象', num: true, fmt: F.int }, { key: 'plantPmPerCar', label: '廠定保單台', num: true, fmt: F.money }, { key: 'validN', label: '有效服專', num: true }, { key: 'ng', label: 'NG服專', num: true, cls: (p, v) => v ? 'cell-bad' : '' }],
       rows: pls, sortKey: 'plantRate', short: true
     });
     UI.bindExport(el, 'rp2', '服務廠定保保留率', t2);
     const t3 = table(el.querySelector('#rp3'), {
-      columns: [{ key: 'plant', label: '服務廠' }, { key: 'advisor', label: '服專', sticky: true, html: (a) => a.p ? UI.nameLink(a.p) : esc(a.advisor) }, { key: 'status', label: '人員狀態', get: (a) => a.p ? a.p.status : '總覽無此人', html: (a, v) => UI.pill(v, v === '現行' ? 'green' : v === '總覽無此人' ? 'gray' : 'blue') },
+      columns: [{ key: 'plant', label: '服務廠' }, { key: 'advisor', label: '服專', sticky: true, html: (a) => a.p ? UI.nameLink(a.p) : esc(a.advisor) }, { key: 'status', label: '人員狀態', get: (a) => a.p ? a.p.status : '總覽無此人', html: (a, v) => UI.pill(v, v === '現行' ? 'green' : 'blue') },
         { key: 'uio', label: 'UIO數', num: true, fmt: F.int }, { key: 'target', label: 'CY26對象', num: true, fmt: F.int },
         { key: 'rate', label: '服專定保保留率', html: (a) => bar(nn(a.rate) ? a.rate * 100 : null, 100, a.ng ? 'var(--bad)' : 'var(--navy-700)', F.pct2(a.rate)), sortVal: (a) => a.rate }, { key: 'plantRate', label: '廠保留率', num: true, fmt: F.pct2 },
         { key: 'vsPlant', label: 'vs 廠（pp）', num: true, fmt: (v) => nn(v) ? (v > 0 ? '+' : '') + (v * 100).toFixed(2) : '—', cls: (a, v) => nn(v) ? (v >= 0 ? 'cell-good' : v <= ngTh ? 'cell-bad' : 'cell-warn') : '' },

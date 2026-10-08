@@ -123,7 +123,7 @@
         rows: pl, sortKey: 'rk', sortDir: 1, short: true
       });
       table(sec.querySelector('#bt8'), {
-        columns: [{ key: 'plant', label: '服務廠' }, { key: 'advisor', label: '服專', html: (a) => a.p ? UI.nameLink(a.p) : esc(a.advisor) + ' <span class="note">（總覽無此人）</span>' },
+        columns: [{ key: 'plant', label: '服務廠' }, { key: 'advisor', label: '服專', html: (a) => a.p ? UI.nameLink(a.p) : esc(a.advisor) },
           { key: 'rate', label: '服專保留率', num: true, fmt: F.pct2, cls: () => 'cell-bad' }, { key: 'plantRate', label: '廠保留率', num: true, fmt: F.pct2 },
           { key: 'vsPlant', label: 'vs 廠（pp）', num: true, fmt: (v) => nn(v) ? (v * 100).toFixed(2) : '—' }, { key: 'target', label: 'CY26對象', num: true, fmt: F.int }],
         rows: ng, sortKey: 'vsPlant', sortDir: 1, short: true
