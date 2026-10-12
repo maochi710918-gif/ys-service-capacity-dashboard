@@ -86,6 +86,9 @@
      * 目前 Excel 未提供工作日／出勤日資料，未填月份之達成率顯示「資料未提供」。 */
     capacity: { perDay: 11.5, workdays: {} },
 
+    /* ---------- 服專稼動率分級（稼動率＝接車 ÷ 工作天數 × perDay） ---------- */
+    utilization: { over: 1.20, high: 1.00, low: 0.80 },
+
     /* ---------- 顧客保留率（CRM 查詢結果） ----------
      * 保留＝最近回廠距查詢日 ≤ days；流失風險＝ riskDays < 未回廠天數 ≤ days；已流失＝ > days */
     retention: { days: 365, riskDays: 270, goodRate: 0.90, warnRate: 0.80, minCustomers: 10 },
@@ -141,9 +144,9 @@
     /* ---------- 權限（系統角色） ---------- */
     permissions: {
       '服務部主管': { scope: 'all', pages: '*' },
-      'HRBP': { scope: 'all', pages: ['board', 'overview', 'sa', 'ca', 'person', 'retention', 'power', 'grid', 'ladder', 'rank', 'quality'] },
-      '廠長': { scope: 'plant', pages: ['board', 'overview', 'plants', 'sa', 'ca', 'person', 'monthly', 'carage', 'retention', 'power', 'grid', 'ladder', 'rank', 'quality'] },
-      '個人': { scope: 'self', pages: ['person', 'monthly', 'retention'] },
+      'HRBP': { scope: 'all', pages: ['board', 'overview', 'sa', 'utilization', 'ca', 'person', 'retention', 'power', 'grid', 'ladder', 'rank', 'quality'] },
+      '廠長': { scope: 'plant', pages: ['board', 'overview', 'plants', 'sa', 'utilization', 'ca', 'person', 'monthly', 'carage', 'retention', 'power', 'grid', 'ladder', 'rank', 'quality'] },
+      '個人': { scope: 'self', pages: ['person', 'monthly', 'retention', 'utilization'] },
       '系統管理員': { scope: 'all', pages: '*' }
     }
   };

@@ -42,9 +42,9 @@
   }
   function loadConfig() {
     const over = lsGet(LS.cfg);
-    S.cfg = deepMerge(defaultConfig(), over ? { weights: over.weights, thresholds: over.thresholds, capacity: over.capacity, retention: over.retention } : {});
+    S.cfg = deepMerge(defaultConfig(), over ? { weights: over.weights, thresholds: over.thresholds, capacity: over.capacity, retention: over.retention, utilization: over.utilization } : {});
   }
-  function saveConfig(cfg) { lsSet(LS.cfg, { weights: cfg.weights, thresholds: cfg.thresholds, capacity: cfg.capacity, retention: cfg.retention }); S.cfg = cfg; S.cache = {}; }
+  function saveConfig(cfg) { lsSet(LS.cfg, { weights: cfg.weights, thresholds: cfg.thresholds, capacity: cfg.capacity, retention: cfg.retention, utilization: cfg.utilization }); S.cfg = cfg; S.cache = {}; }
   function resetConfig() { lsDel(LS.cfg); loadConfig(); S.cache = {}; }
   function init() {
     loadModel(); loadConfig();
