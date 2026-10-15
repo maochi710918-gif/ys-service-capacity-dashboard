@@ -137,10 +137,20 @@
 
   /* ---------- 圖表 ---------- */
   const charts = [];
-  const C = {
-    navy: '#16294a', navy2: '#2b4c80', blue: '#3b82f6', sky: '#93c5fd', red: '#c3002f', gray: '#9ca3af', green: '#15803d', amber: '#d97706', teal: '#0f766e', slate: '#64748b',
-    series: ['#16294a', '#c3002f', '#3b82f6', '#9ca3af', '#0f766e', '#d97706', '#7c3aed', '#64748b']
+  const PALETTE = {
+    light: { navy: '#16294a', navy2: '#2b4c80', blue: '#3b82f6', sky: '#93c5fd', red: '#c3002f', gray: '#9ca3af', green: '#15803d', amber: '#d97706', teal: '#0f766e', slate: '#64748b',
+      series: ['#16294a', '#c3002f', '#3b82f6', '#9ca3af', '#0f766e', '#d97706', '#7c3aed', '#64748b'] },
+    dark: { navy: '#7aa2e3', navy2: '#93c5fd', blue: '#60a5fa', sky: '#3b5b8f', red: '#f43f5e', gray: '#94a3b8', green: '#22c55e', amber: '#f59e0b', teal: '#2dd4bf', slate: '#94a3b8',
+      series: ['#7aa2e3', '#f43f5e', '#60a5fa', '#94a3b8', '#2dd4bf', '#f59e0b', '#a78bfa', '#cbd5e1'] }
   };
+  const C = Object.assign({}, PALETTE.light);
+  const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
+  function applyTheme(t) {
+    if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); else document.documentElement.removeAttribute('data-theme');
+    Object.assign(C, PALETTE[t === 'dark' ? 'dark' : 'light']);
+    try { localStorage.setItem('ys_dash_theme', t); } catch (e) { }
+  }
+  if (isDark()) Object.assign(C, PALETTE.dark);
   const baseOpt = {
     textStyle: { fontFamily: 'Noto Sans TC, Microsoft JhengHei, sans-serif' },
     grid: { left: 52, right: 52, top: 38, bottom: 34, containLabel: false },
@@ -150,8 +160,10 @@
   function chart(el, option) {
     if (!el) return null;
     const ex = echarts.getInstanceByDom(el); if (ex) ex.dispose();
-    const c = echarts.init(el, null, { renderer: 'canvas' });
+    const dark = isDark();
+    const c = echarts.init(el, dark ? 'dark' : null, { renderer: 'canvas' });
     const opt = Object.assign({}, baseOpt, option);
+    if (dark && opt.backgroundColor == null) opt.backgroundColor = 'transparent';
     if (option.grid) opt.grid = Object.assign({}, baseOpt.grid, option.grid);
     if (option.tooltip) opt.tooltip = Object.assign({}, baseOpt.tooltip, option.tooltip);
     if (option.legend) opt.legend = Object.assign({}, baseOpt.legend, option.legend);
@@ -184,5 +196,5 @@
   }
   const nameLink = (p) => '<span class="name-link" data-id="' + esc(p.id) + '">' + esc(p.name) + '</span>';
 
-  root.UI = { F, NA, esc, nn, kpi, table, exportData, exportBtns, bindExport, chart, disposeCharts, C, modal, closeModal, toast, card, seg, bindSeg, pill, dot, lightByDelta, lightPR, lightScore, nameLink };
+  root.UI = { applyTheme, isDark, F, NA, esc, nn, kpi, table, exportData, exportBtns, bindExport, chart, disposeCharts, C, modal, closeModal, toast, card, seg, bindSeg, pill, dot, lightByDelta, lightPR, lightScore, nameLink };
 })(window);

@@ -181,6 +181,9 @@
     renderUserRole();
     $('userRole').addEventListener('change', (e) => { const r = e.target.value; renderUserRole(); e.target.value = S.user.role; askUserRole(r); });
     $('roleSwitch').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => setRole(b.dataset.role)));
+    const syncThemeBtn = () => { $('themeBtn').textContent = UI.isDark() ? '☀ 淺色' : '🌙 深色'; };
+    syncThemeBtn();
+    $('themeBtn').addEventListener('click', () => { UI.applyTheme(UI.isDark() ? 'light' : 'dark'); syncThemeBtn(); render(); });
     $('menuBtn').addEventListener('click', () => $('app').classList.toggle('nav-open'));
     $('scrim').addEventListener('click', () => $('app').classList.remove('nav-open'));
     $('filterToggle').addEventListener('click', () => {
