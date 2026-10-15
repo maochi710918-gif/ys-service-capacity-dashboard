@@ -84,6 +84,7 @@
         '<div class="sw" style="margin-top:10px"><div><b class="up">▲ 優勢構面</b><ul>' + (strengths.map((x) => '<li>' + x.d.label + ' ' + F.pr(x.v) + '</li>').join('') || '<li>尚無構面PR ≥ 50</li>') + '</ul></div><div><b class="down">▼ 短板構面</b><ul>' + (weak.map((x) => '<li>' + x.d.label + ' ' + F.pr(x.v) + '<br><span class="note">建議：' + esc(S.cfg.training[x.d.key] || '') + '</span></li>').join('') || '<li>無明顯短板（各構面PR ≥ 50）</li>') + '</ul></div></div>') +
       '</div>' +
       '<div class="section-title">績效資訊</div>' + card('個人 vs 所屬廠／全公司／同證照／同年資 平均', '<div id="perf"></div>', { flush: true, tools: UI.exportBtns('pf') }) +
+      powerDetail(p, D) +
       csiCard(p, D) + (root.retentionCard ? root.retentionCard(p) : '') +
       '<div class="section-title">視覺分析</div><div class="grid g2">' +
       card('戰力構面 PR 雷達', '<div class="chart" id="r1"></div>', { sub: '外圈＝100；比較同證照平均' }) +
@@ -162,6 +163,52 @@
     el.querySelector('#r7').innerHTML = dims.map((d) => { const v = p[d.prKey]; return '<div class="bar-row"><span>' + d.label + '<br><span class="note">權重 ' + Math.round(W[d.key] * 100) + '%</span></span><div class="bar-track"><div class="bar-fill" style="width:' + (nn(v) ? v * 100 : 0) + '%;background:' + (!nn(v) ? 'var(--gray)' : v >= .6 ? 'var(--good)' : v >= .4 ? 'var(--navy-700)' : 'var(--bad)') + '"></div></div><b style="text-align:right;font-family:var(--num)">' + F.pr(v) + '</b></div>'; }).join('') +
       '<p class="note">貢獻分數＝權重 × PR；' + dims.map((d) => d.label.replace('PR', '') + ' ' + (nn(p[d.prKey]) ? (W[d.key] * p[d.prKey] * 100).toFixed(1) : '—')).join('、') + '</p>';
   };
+
+  /* v2：戰力定義、月度戰力、構面明細 */
+  function powerDetail(p, D) {
+    const role = p.role, W = S.cfg.weights[role], dims = S.cfg.dimensions[role], x = p.excel || {};
+    const sol = (S.model.solicit || []).find((r) => r.name === p.name && r.roleName === (role === 'SA' ? '服專' : '出納')) || {};
+    const pct = F.pct2, pr = F.pr, n1 = F.d1, n2 = F.d2, money = F.money, csi = F.csi;
+    const items = role === 'SA' ? {
+      volume: [['公司基準日均接車', x.dailyBase, n2, x.prVolume]],
+      revenue: [['單車產值', x.perCar, money, x.prPerCar]],
+      retention: [['A1準時定保達成', x.a1, pct, x.prA1], ['A2準時定保達成', x.a2, pct, x.prA2]],
+      designate: [['APP預約指定', x.app, pct, x.prApp], ['ES服專再指定', x.esRedesignate, pct, x.prEsR]],
+      service: [['CSI滿意度', x.csi, csi, x.prCsi], ['CSI首回滿意度', x.csiFirst, csi, x.prCsiFirst], ['ES自主滿意度', x.esSelf, csi, x.prEsSelf]],
+      ops: [['每100台收費NG', x.ngFeePer100, n2, x.prNgFee], ['每100台時間NG', x.ngTimePer100, n2, x.prNgTime], ['每100台解金鑰', x.keyPer100, n2, x.prKeyInv]],
+      solicit: [['美容達成率', sol.beautyRate, pct, sol.prBeauty], ['裕信護照達成率', sol.ysRate, pct, sol.prYs], ['裕日護照每100台本數', sol.yrPer100, n2, sol.prYr], ['S餐油品使用率', sol.oilRate, pct, sol.prOil], ['化學品OK率', sol.chemRate, pct, sol.prChem], ['NVS達成率', sol.nvsRate, pct, sol.prNvs], ['自費鈑噴營收達成率', nn(sol.bodyRate) ? sol.bodyRate : x.bodyPaint, pct, sol.prBody]]
+    } : {
+      volume: [['公司基準日均結帳', x.dailyBase, n2, x.prVolume]],
+      digital: [['月平均電子簽名率', x.esign, pct, x.prDigital]],
+      service: [['CSI滿意度', x.csi, csi, x.prCsi], ['CSI首回滿意度', x.csiFirst, csi, x.prCsiFirst], ['ES自主滿意度', x.esSelf, csi, x.prEsSelf]],
+      card: [['感心卡核卡（平均）', x.card, n2, x.prCard]],
+      ops: [['每100張工單收費NG', x.ngFeePer100, n2, x.prNgFee], ['每100張工單解金鑰', x.keyPer100, n2, x.prKeyInv]],
+      solicit: [['裕信護照每100張工單本數', sol.ysPer100, n2, sol.prYs], ['裕日護照每100張工單本數', sol.yrPer100, n2, sol.prYr]]
+    };
+    let rows = '';
+    dims.forEach((d) => {
+      const its = items[d.key] || [], v = p[d.prKey], w = W[d.key] || 0;
+      its.forEach((it, i) => {
+        rows += '<tr>' + (i === 0 ? '<td rowspan="' + its.length + '"><b>' + esc(d.label) + '</b><br><span class="note">' + esc(d.desc) + '</span></td>' : '') +
+          '<td>' + esc(it[0]) + '</td><td class="num">' + it[2](it[1]) + '</td><td class="num">' + pr(it[3]) + '</td>' +
+          (i === 0 ? '<td class="num" rowspan="' + its.length + '"><b>' + pr(v) + '</b></td><td class="num" rowspan="' + its.length + '">' + Math.round(w * 100) + '%</td><td class="num" rowspan="' + its.length + '"><b>' + (nn(v) ? (w * v * 100).toFixed(2) : '—') + '</b></td>' : '') + '</tr>';
+      });
+    });
+    const mp = (S.model.monthlyPower || []).filter((r) => r.name === p.name && r.roleName === (role === 'SA' ? '服專' : '出納')).sort((a, b) => (a.month < b.month ? -1 : 1));
+    const id = 'mp' + Math.random().toString(36).slice(2, 7);
+    setTimeout(() => {
+      const elc = document.getElementById(id); if (!elc || !mp.length) return;
+      chart(elc, { tooltip: { trigger: 'axis', formatter: (xs) => xs[0].axisValue + '<br>月度戰力 ' + (nn(xs[0].value) ? Number(xs[0].value).toFixed(2) : '—') + '｜' + (mp[xs[0].dataIndex].status || '') + (mp[xs[0].dataIndex].rank ? '｜當月排名 ' + mp[xs[0].dataIndex].rank : '') },
+        grid: { left: 40, right: 20, top: 20, bottom: 24 }, xAxis: { type: 'category', data: mp.map((r) => Number(r.month.slice(5)) + '月') }, yAxis: { type: 'value', min: 0, max: 100 },
+        series: [{ type: 'line', symbolSize: 8, data: mp.map((r) => nn(r.power) ? +(+r.power).toFixed(2) : null), itemStyle: { color: C.red }, markLine: nn(p.power) ? { silent: true, symbol: 'none', lineStyle: { type: 'dashed', color: C.navy }, label: { formatter: '期間 ' + p.power.toFixed(2), fontSize: 10 }, data: [{ yAxis: +p.power.toFixed(2) }] } : undefined }] });
+    }, 0);
+    return '<div class="section-title">綜合戰力組成（期間 ' + Store.monthLabel(Store.allMonths()) + '）</div>' +
+      '<div class="guide"><b>定義</b><span><b>期間綜合戰力</b> ' + F.score(p.power) + '：' + Store.monthLabel(Store.allMonths()) + ' 累積指標重新 PR 後依權重加權（0–100）</span><span><b>月度戰力平均</b> ' + F.score(x.monthlyPowerAvg) + '：各月戰力之平均，另列不加總</span><span><b>各月戰力</b>：各月指標當月 PR 加權</span><span>正式排名：' + esc(p.rankStatus || '—') + '</span></div>' +
+      '<div class="grid g2b">' + card('各月戰力', mp.length ? '<div class="chart short" id="' + id + '"></div>' : '<div class="empty">無月度戰力資料</div>', { sub: '虛線＝期間綜合戰力' }) +
+      card('構面明細：原始成績 → 單項PR → 構面PR × 權重 ＝ 加權得分', '<div class="tbl-wrap short"><table class="tbl"><thead><tr><th>構面</th><th>項目</th><th class="num">原始成績</th><th class="num">單項PR</th><th class="num">構面PR</th><th class="num">權重</th><th class="num">加權得分</th></tr></thead><tbody>' + rows +
+        '<tr class="avg"><td colspan="6">期間綜合戰力（Σ加權得分）</td><td class="num">' + F.score(p.power) + '</td></tr></tbody></table></div>', { flush: true }) + '</div>';
+  }
+
   function csiCard(p, D) {
     const X = root.CSIX; if (!X || !X.has()) return '';
     const cms = X.csiMonths(D.months);

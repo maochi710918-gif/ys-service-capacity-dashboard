@@ -181,22 +181,28 @@
   function score(people, role, cfg) {
     const dims = cfg.dimensions[role], W = cfg.weights[role];
     const pop = people.filter((p) => p.status === '現行');
+    const xl = cfg.scoreSource === 'excel' && people.some((p) => p.excel && nn(p.excel[dims[0].prKey]));
     const pools = {};
     dims.forEach((d) => d.metrics.forEach(([k]) => { pools[k] = pop.map((p) => p[k]).filter(nn); }));
     people.forEach((p) => {
       p.role = role;
       p.tenureGroup = tenureGroup(p.years, cfg);
       p.maturity = maturity(role, p.license, p.years);
+      // 正式排名資格（v2：9/30現職、≥3服務月、必要資料齊備；以 Excel「正式排名資料狀態」為準）
+      p.formal = p.status === '現行' && (!p.excel || !p.excel.rankStatus || /^正式/.test(p.excel.rankStatus));
+      p.rankStatus = p.excel && p.excel.rankStatus ? p.excel.rankStatus : (p.status === '現行' ? '正式排名' : '不列現職排名');
       dims.forEach((d) => {
         if (p.status !== '現行') { p[d.prKey] = null; return; }
+        // Excel 計分模式：單項／構面 PR 直接採附件（同職務現職有效候選者比較），權重於系統加權
+        if (xl) { const v = p.excel ? p.excel[d.prKey] : null; p[d.prKey] = nn(v) && v !== '' ? v : null; return; }
         p[d.prKey] = mean(d.metrics.map(([k, dir]) => prOf(p[k], pools[k], dir)));
       });
       let ws = 0, acc = 0;
       dims.forEach((d) => { if (nn(p[d.prKey])) { ws += W[d.key]; acc += W[d.key] * p[d.prKey]; } });
-      // 1–9月版口徑：各構面皆可計算才計分（requireAllDims）；舊版可改為缺構面時依有值權重重配
+      // 各構面皆可計算才計分（requireAllDims）；缺資料不當零、不重分配權重
       const allDims = dims.every((d) => nn(p[d.prKey]));
       const okDims = cfg.thresholds.requireAllDims ? allDims : ws > 0;
-      p.power = (p.status === '現行' && okDims && p.completeness >= cfg.thresholds.scoreMinCompleteness) ? acc / ws * 100 : null;
+      p.power = (p.status === '現行' && okDims && (!xl || p.formal) && (p.completeness == null || p.completeness >= cfg.thresholds.scoreMinCompleteness)) ? acc / ws * 100 : null;
     });
     const scored = pop.filter((p) => nn(p.power));
     people.forEach((p) => {
@@ -231,6 +237,7 @@
 
   /* ---------------- 建立全部人員（依期間重算） ---------------- */
   const STATIC_KEYS = ['plant', 'name', 'license', 'years', 'status', 'position', 'advice'];
+  const XL_SKIP = ['_row', 'role', 'power', 'rank', 'prLicense', 'prTenure', 'licenseGap', 'promotion', 'talentType', 'tenureGroup', 'maturity'];
   function buildPeople(model, cfg, months) {
     const out = {};
     [['SA', model.saPeople, model.saMonthly], ['CA', model.caPeople, model.caMonthly]].forEach(([role, base, monthly]) => {
@@ -242,6 +249,10 @@
         STATIC_KEYS.forEach((k) => { p[k] = b[k]; });
         p.monthly = (byName[b.name] || []).slice().sort((a, c) => (a.month < c.month ? -1 : 1));
         Object.assign(p, aggregate(role, p.monthly, months, { csiEnd }));
+        // 全期間：個人指標採附件原值（與 Excel 逐欄一致）；子期間由月度明細重算量值
+        if (cfg.scoreSource === 'excel' && months.length === (model.meta.months || []).length) {
+          Object.keys(b).forEach((k) => { if (XL_SKIP.indexOf(k) < 0 && STATIC_KEYS.indexOf(k) < 0) p[k] = b[k] === '' ? null : b[k]; });
+        }
         if (role === 'SA') { p.capacityRate = capacityRate(p.monthly, months, cfg); p.capacityMonths = p.monthly.filter((r) => months.indexOf(r.month) >= 0 && nn(r.cars) && (r.workdays > 0 || (cfg.capacity.workdays || {})[r.month] > 0)).map((r) => r.month); }
         const hist = p.monthly.filter((r) => r.actualPlant && r.actualPlant !== p.plant).map((r) => r.month + ' ' + r.actualPlant);
         p.plantHistory = hist;

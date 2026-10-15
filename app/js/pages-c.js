@@ -245,13 +245,12 @@
       '<div class="stat wn"><b>' + c.powerChanged + '</b><span>現職綜合戰力變動</span></div><div class="stat wn"><b>' + c.rankChanged + '</b><span>現職排名變動</span></div>' +
       '<div class="stat err"><b>' + c.talentChanged + ' / ' + c.promoChanged + '</b><span>人才類型／升階變動</span></div><div class="stat"><b>' + c.added + '</b><span>新增總覽列（多為他職工作量）</span></div></div>' +
       '<div class="grid g2"><div>' +
-      '<b>本次更新內容</b><ul class="note" style="margin:4px 0 10px;padding-left:18px">' +
-      '<li>期間延伸至 9 月：工作量、個人業績、APP 至 9 月；考核至 8 月（9 月考核留白，不補 0）。</li>' +
+      '<b>本次更新內容</b><ul class="note" style="margin:4px 0 10px;padding-left:18px">' + (L.notes ? L.notes.map((t) => '<li>' + esc(t) + '</li>').join('') : '<li>期間延伸至 9 月：工作量、個人業績、APP 至 9 月；考核至 8 月（9 月考核留白，不補 0）。</li>' +
       '<li>1–8 月工作量依全部人員與完整工單號碼重新核對（例：1 月接車 12,000→12,027、結帳 11,621→12,644）。</li>' +
       '<li>計算口徑：單車產值分母只取有業績月份；NG 發生率分母只取有該項 NG 成績月份；APP 以指定次數÷同來源接車數加權；波動度改樣本標準差；CSI 均值差＝6–8 月比 3–5 月；資料完整度＝有效欄位÷（13 項×任職月數）。</li>' +
       '<li>綜合戰力須各構面皆可計算才計分；未計分者標示「不盤點／資料不足」。越少越好指標之 PR＝高於本人比例。</li>' +
       '<li>人員口徑核對至 9/30：新增 留停、預定到職、範圍外 等狀態；他職人員保留工作量，不列現職盤點。</li>' +
-      '<li>新增：8–9 月廠工作天數與標準量能達成率（11.5 台／工作日）、8–9 月廠營收目標／實績。</li></ul>' +
+      '<li>新增：8–9 月廠工作天數與標準量能達成率（11.5 台／工作日）、8–9 月廠營收目標／實績。</li>') + '</ul>' +
       '<b>九宮格變動</b><p class="note" style="margin:4px 0">服專：' + esc(gridTxt('SA')) + '<br>出納：' + esc(gridTxt('CA')) + '</p>' +
       '<b>排除的廠別</b><p class="note" style="margin:4px 0">' + esc(L.excluded.join('、')) + '（16 服務廠為分析範圍）。</p></div>' +
       '<div><b>現職人員排名／人才分類變動</b><div class="tbl-wrap short"><table class="tbl"><thead><tr><th>姓名</th><th>角色</th><th>廠別</th><th>排名</th><th>綜合戰力</th><th>人才類型</th><th>升階準備度</th></tr></thead><tbody>' +
@@ -313,6 +312,26 @@
       const okT = cur.filter((p) => nn(p.excel.prTenure) ? Math.abs(p.prTenure - p.excel.prTenure) < 1e-6 : !nn(p.prTenure)).length;
       add('同年資PR', roleName(role) + '逐人同年資PR一致人數', cur.length, okT, 'Excel「<1年」條件錯誤，見檢核項目');
     });
+    // v2：正式排名、招攬PR有效人數
+    ['SA', 'CA'].forEach((role) => {
+      const cur = role === 'SA' ? sa : ca;
+      const xf = cur.filter((p) => /^正式/.test(p.excel.rankStatus || '')).length;
+      if (cur.some((p) => p.excel.rankStatus)) add('排名資格', roleName(role) + '正式排名人數（Excel 正式排名資料狀態）', xf, cur.filter((p) => p.rank != null).length);
+      const xs = cur.filter((p) => p.excel.prSolicit != null && p.excel.prSolicit !== '').length;
+      if (xs) add('排名資格', roleName(role) + '招攬PR有效人數（與正式排名分開）', xs, cur.filter((p) => p.prSolicit != null).length);
+    });
+    // v2：廠營收（系統由廠別月度量能配對計算 vs Excel 服務廠量能）
+    if (root.REVX && roster.some((r) => r.pairTarget != null)) {
+      const R = (S.model.plantMonthly || []), A = root.REVX.agg(R.filter((r) => roster.some((x) => x.plant === r.plant)));
+      const sx = (k) => sum(roster.map((r) => r[k] || 0));
+      add('廠營收', '全公司累積配對目標', sx('pairTarget'), A.pairT);
+      add('廠營收', '全公司累積配對實績', sx('pairActual'), A.pairA);
+      add('廠營收', '全公司累積配對達成率', sx('pairActual') / sx('pairTarget'), A.rate);
+      add('廠營收', '適用營運廠月（配對筆數）', sx('pairMonths'), A.pairN);
+      roster.filter((r) => /民權/.test(r.plant)).forEach((r) => { const a2 = root.REVX.agg(R.filter((x) => x.plant === r.plant)); add('廠營收', r.plant + ' 有效營收月份', r.pairMonths, a2.pairN); add('廠營收', r.plant + ' 累積達成率', r.cumRate, a2.rate); });
+      const q = (Q) => { const x = R.filter((r) => roster.some((y) => y.plant === r.plant) && root.REVX.qOf(r.month) === Q); return root.REVX.agg(x).rate; };
+      if (roster.some((r) => r.q3T != null)) add('廠營收', '全公司 Q3 較 Q2 變化（pp）', (sx('q3A') / sx('q3T') - sx('q2A') / sx('q2T')) * 100, (q('Q3') - q('Q2')) * 100);
+    }
     // 服務廠量能
     const psD = Store.plantStats({ P, people: P, pfa: false }, { all: true });
     const keys = [['saAvgCars', '服專月均接車'], ['saPower', '服專平均戰力'], ['caAvgOrders', '出納月均結帳'], ['caPower', '出納平均戰力']];

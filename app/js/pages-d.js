@@ -142,7 +142,7 @@
     });
     const t1 = table(el.querySelector('#bt1'), {
       columns: [{ key: 'rank', label: '名次', num: true, html: (r) => nn(r.rank) ? '<b>' + medal(r.rank) + '</b>' : '—' }, { key: 'plant', label: '服務廠', html: (r) => '<b>' + esc(r.plant) + '</b>' },
-        { key: 'power', label: '廠戰力', html: (r) => bar(r.power, 100, powColor(r.power)), sortVal: (r) => r.power }, { key: 'saPower', label: '服專', num: true, fmt: F.score, cls: (r, v) => PX.colorCell('power', v) }, { key: 'caPower', label: '出納', num: true, fmt: F.score, cls: (r, v) => PX.colorCell('power', v) },
+        { key: 'power', label: '廠戰力', html: (r) => bar(r.power, 100, powColor(r.power), F.score(r.power)), sortVal: (r) => r.power }, { key: 'saPower', label: '服專', num: true, fmt: F.score, cls: (r, v) => PX.colorCell('power', v) }, { key: 'caPower', label: '出納', num: true, fmt: F.score, cls: (r, v) => PX.colorCell('power', v) },
         { key: 'staff', label: '人力 服專/出納', get: (r) => r.saCount + ' / ' + r.caCount, sortVal: (r) => r.saCount + r.caCount }, { key: 'high', label: '高戰力', num: true }, { key: 'low', label: '低戰力', num: true, cls: (r, v) => v ? 'cell-bad' : '' },
         { key: 'csiO', label: '顧客整體', num: true, fmt: f2, cls: (r, v) => csiCls(v) }, { key: 'csiK', label: '結帳服務', num: true, fmt: f2, cls: (r, v) => csiCls(v) }, { key: 'note', label: '提醒', html: (r) => r.note ? UI.pill(r.note, /0人/.test(r.note) ? 'red' : 'yellow') : '' }],
       rows: prow, sortKey: 'rank', sortDir: 1, short: true, onRow: (r) => drillPlant(r)
@@ -152,7 +152,7 @@
       const l = r.sa.concat(r.ca).filter((p) => roleOn(p.role));
       UI.modal(r.plant + '｜人員戰力（' + l.length + '人）', '<div id="dp"></div>', (b) => table(b.querySelector('#dp'), {
         columns: [{ key: 'role', label: '角色', get: (p) => roleName(p.role) }, { key: 'name', label: '姓名', html: (p) => UI.nameLink(p) }, { key: 'license', label: '證照' },
-          { key: 'power', label: '綜合戰力', html: (p) => bar(p.power, 100, powColor(p.power)), sortVal: (p) => p.power }, { key: 'rank', label: '職務內排名', num: true, html: (p) => nn(p.rank) ? p.rank + ' / ' + (p.role === 'SA' ? saAll : caAll).length : '—', sortVal: (p) => p.rank },
+          { key: 'power', label: '綜合戰力', html: (p) => bar(p.power, 100, powColor(p.power), F.score(p.power)), sortVal: (p) => p.power }, { key: 'rank', label: '職務內排名', num: true, html: (p) => nn(p.rank) ? p.rank + ' / ' + (p.role === 'SA' ? saAll : caAll).length : '—', sortVal: (p) => p.rank },
           { key: 'all', label: '全排名', num: true, get: (p) => p._all }, { key: 'talentType', label: '人才類型', html: (p, v) => UI.pill(v, TALENT_COLOR[v]) }], rows: l, sortKey: 'power', short: true
       }));
     }
@@ -164,7 +164,7 @@
       const t2 = table(el.querySelector('#bt2'), {
         columns: [{ key: '_all', label: '全排名', num: true, html: (p) => '<b>' + medal(p._all) + '</b>', sortVal: (p) => p._all }, { key: 'rank', label: '職務內排名', num: true, html: (p) => p.rank + ' / ' + (p.role === 'SA' ? saAll : caAll).length, sortVal: (p) => p.rank },
           { key: 'name', label: '姓名', sticky: true, html: (p) => UI.nameLink(p) }, { key: 'role', label: '角色', get: (p) => roleName(p.role) }, { key: 'plant', label: '服務廠' }, { key: 'license', label: '證照' },
-          { key: 'power', label: '綜合戰力', html: (p) => bar(p.power, 100, powColor(p.power)), sortVal: (p) => p.power }, { key: 'talentType', label: '人才類型', html: (p, v) => UI.pill(v, TALENT_COLOR[v]) },
+          { key: 'power', label: '綜合戰力', html: (p) => bar(p.power, 100, powColor(p.power), F.score(p.power)), sortVal: (p) => p.power }, { key: 'talentType', label: '人才類型', html: (p, v) => UI.pill(v, TALENT_COLOR[v]) },
           { key: 'vol', label: '月均量能', num: true, get: (p) => p.role === 'SA' ? p.avgCars : p.avgOrders, html: (p) => F.int(p.role === 'SA' ? p.avgCars : p.avgOrders) + '<small class="note"> ' + (p.role === 'SA' ? '台' : '張') + '</small>' },
           { key: 'cs', label: '顧客整體（份）', num: true, get: (p) => csiOf[p.id] && csiOf[p.id].n ? csiOf[p.id].o : null, html: (p) => { const c = csiOf[p.id]; return c && c.n ? f2(c.o) + '<small class="note">（' + c.n + '）</small>' : '—'; }, cls: (p, v) => csiCls(v) },
           { key: 'sw', label: '強項／短板', get: (p) => { const x = strongWeak(p); return x.s + '／' + x.w; }, html: (p) => { const x = strongWeak(p); return '<span class="up">▲' + x.s + '</span>　<span class="down">▼' + x.w + '</span>'; } }],

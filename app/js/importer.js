@@ -15,7 +15,7 @@
   /** 解析單一工作表：找出表頭列（第一欄 = headerKey），回傳物件陣列 */
   function parseTable(XLSX, wb, sheetName, spec, report) {
     const ws = wb.Sheets[sheetName];
-    if (!ws) { report.errors.push({ sheet: sheetName, msg: '缺少工作表「' + sheetName + '」' }); return []; }
+    if (!ws) { (spec.optional ? report.warnings : report.errors).push({ sheet: sheetName, msg: '缺少工作表「' + sheetName + '」' }); return []; }
     const rows = sheetRows(XLSX, ws);
     const hIdx = rows.findIndex((r) => r && clean(r[0]) === clean(spec.headerKey));
     if (hIdx < 0) { report.errors.push({ sheet: sheetName, msg: '找不到表頭列（第一欄應為「' + spec.headerKey + '」）' }); return []; }
@@ -121,7 +121,8 @@
     }
     const note = rows[1] && rows[1][0];
     const monthly = [];
-    rows.forEach((r) => { if (r && /^\d{4}\/\d{2}$/.test(String(r[0] || '').trim()) && typeof r[1] === 'number') monthly.push({ month: String(r[0]).trim(), cars: r[1], revenue: r[2], orders: r[3] }); });
+    const seenM = {};
+    rows.forEach((r) => { const m = r && String(r[0] || '').trim(); if (r && /^\d{4}\/\d{2}$/.test(m) && typeof r[1] === 'number' && !seenM[m]) { seenM[m] = 1; monthly.push({ month: m, cars: r[1], revenue: r[2], orders: r[3] }); } });
     return { ref, note: note || '', monthly };
   }
 
@@ -138,6 +139,9 @@
     const checks = parseTable(XLSX, wb, '資料檢核', M['資料檢核'], report);
     const definitions = parseTable(XLSX, wb, '指標定義', M['指標定義'], report);
     const sources = parseTable(XLSX, wb, '資料來源', M['資料來源'], report);
+    const solicit = parseTable(XLSX, wb, '招攬總覽', M['招攬總覽'], report);
+    const monthlyPower = parseTable(XLSX, wb, '月度戰力', M['月度戰力'], report);
+    monthlyPower.forEach((r) => { r.month = normMonth(r.month); });
     const weights = parseWeights(XLSX, wb, report);
     const gridRef = parseGridSheet(XLSX, wb);
     const overview = parseOverview(XLSX, wb);
@@ -202,8 +206,9 @@
     report.affectedPeople = Array.from(new Set(saPeople.concat(caPeople).map((p) => p.name)));
 
     const model = {
-      meta: { fileName: fileName || '', importedAt: new Date().toISOString(), note: overview ? overview.note : '', months },
-      saPeople, caPeople, saMonthly, caMonthly, plants, plantMonthly, checks, definitions, sources,
+      meta: { fileName: fileName || '', importedAt: new Date().toISOString(), note: overview ? overview.note : '', months,
+        version: (() => { const m = String(fileName || '').match(/(\d{4}\.\d{1,2}\.\d{1,2})版?\s*(v\d+)?/i); return m ? m[1] + (m[2] ? ' ' + m[2] : '') : ''; })(), baseDate: '9/30' },
+      saPeople, caPeople, saMonthly, caMonthly, plants, plantMonthly, checks, definitions, sources, solicit, monthlyPower,
       headers: report.headers || {}, excelWeights: weights, gridRef, overviewRef: overview ? overview.ref : {}, overviewMonthly: overview ? overview.monthly : [], plantMismatch: mismatch
     };
     return { model, report };

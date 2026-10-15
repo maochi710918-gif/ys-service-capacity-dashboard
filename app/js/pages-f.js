@@ -47,8 +47,8 @@
     const MA = mAgg(lastM), MP = mAgg(prevM);
     const cmp = (k) => ({ cur: MA ? MA[k] : null, prev: MP ? MP[k] : null, curLabel: lastM ? Number(lastM.slice(5)) + '月' : '本期', prevLabel: prevM ? Number(prevM.slice(5)) + '月' : '上期' });
 
-    el.innerHTML = '<div class="page-head"><div><h1>服專稼動率（接車）｜量與值</h1><p>計算月份：' + mLabel + '（有廠工作天數之月份）｜現行服專 ' + rows.length + ' 人｜標準 ' + perDay() + ' 台／工作日</p></div></div>' +
-      '<div class="guide"><b>定義</b><span>稼動率＝接車台數 ÷（廠工作天數 × ' + perDay() + '）＝ Excel「標準量能達成率」</span><span>日均接車＝接車 ÷ 工作天數</span><span>單車產值＝業績 ÷ 有業績月份接車</span><span>日均產值＝業績 ÷ 工作天數</span><span>分級：≥' + F.pct0(T.over) + ' 超載｜' + F.pct0(T.high) + '–' + F.pct0(T.over) + ' 達標｜' + F.pct0(T.low) + '–' + F.pct0(T.high) + ' 接近｜<' + F.pct0(T.low) + ' 偏低</span></div>' +
+    el.innerHTML = '<div class="page-head"><div><h1>服專稼動率（接車）｜量與值</h1><p>計算月份：' + mLabel + '（有公司基準工作日之月份）｜現行服專 ' + rows.length + ' 人｜標準 ' + perDay() + ' 台／工作日</p></div></div>' +
+      '<div class="guide"><b>定義</b><span>稼動率＝接車台數 ÷（公司基準工作日 × ' + perDay() + '）＝ Excel「標準量能達成率」</span><span>日均接車＝接車 ÷ 工作天數</span><span>單車產值＝業績 ÷ 有業績月份接車</span><span>日均產值＝業績 ÷ 工作天數</span><span>分級：≥' + F.pct0(T.over) + ' 超載｜' + F.pct0(T.high) + '–' + F.pct0(T.over) + ' 達標｜' + F.pct0(T.low) + '–' + F.pct0(T.high) + ' 接近｜<' + F.pct0(T.low) + ' 偏低</span></div>' +
       (allMs.length > wdMonths.length ? '<div class="banner info"><b>工作天數涵蓋</b><span>所選期間 ' + Store.monthLabel(allMs) + '，其中僅 ' + mLabel + ' 有廠工作天數，稼動率只計這些月份；其他月份請於「指標與權重設定」補填工作天數。量值趨勢圖仍呈現全部月份。</span></div>' : '') +
       '<div class="kpis">' +
       kpi(Object.assign({ label: '平均稼動率', value: A.util, fmt: F.pct2, light: !nn(A.util) ? 'gray' : A.util >= T.high ? 'green' : A.util >= T.low ? 'yellow' : 'red', company: CO.util, deltaFmt: (v) => (v * 100).toFixed(2) + 'pp', hint: '接車合計 ÷ 標準量合計' }, cmp('util'))) +

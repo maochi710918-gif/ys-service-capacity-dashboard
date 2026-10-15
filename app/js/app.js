@@ -4,7 +4,7 @@
 (function (root) {
   const { Store, UI } = root; const S = Store.S; const esc = UI.esc;
   const NAV = [
-    ['board', '戰力總表', '總覽'], ['overview', '管理總覽', '總覽'], ['plants', '服務廠比較', '總覽'], ['sa', '服專分析', '量能分析'], ['utilization', '服專稼動率', '量能分析'], ['ca', '出納分析', '量能分析'],
+    ['board', '戰力總表', '總覽'], ['overview', '管理總覽', '總覽'], ['plants', '服務廠比較', '總覽'], ['revenue', '廠營收分析', '總覽'], ['sa', '服專分析', '量能分析'], ['utilization', '服專稼動率', '量能分析'], ['ca', '出納分析', '量能分析'],
     ['person', '個人分析', '量能分析'], ['monthly', '月度推移', '量能分析'], ['carage', '車齡結構', '量能分析'], ['retention', '顧客保留率', '量能分析'], ['power', '綜合戰力', '人才盤點'],
     ['grid', '人才九宮格', '人才盤點'], ['ladder', '升階與人才梯隊', '人才盤點'], ['rank', '排行與異常', '人才盤點'], ['quality', '資料品質', '資料與系統'],
     ['import', '資料匯入', '資料與系統'], ['settings', '指標與權重設定', '資料與系統'], ['perms', '權限管理', '資料與系統']
@@ -30,7 +30,7 @@
     $('nav').querySelectorAll('a').forEach((a) => a.addEventListener('click', () => document.getElementById('app').classList.remove('nav-open')));
     const m = S.model.meta || {};
     $('sideFoot').innerHTML = '資料：' + esc(m.fileName || '—') + '<br>' + (S.source === 'import' ? '來源：使用者匯入' : '來源：預設Excel') + '　期間 ' + Store.monthLabel(Store.allMonths());
-    $('dataStamp').textContent = '資料期間 ' + Store.monthLabel(Store.allMonths()) + '｜人員依115.9最新廠別';
+    $('dataStamp').textContent = (m.version ? '資料版本 ' + m.version + '｜' : '') + '分析期間 ' + Store.monthLabel(Store.allMonths()) + '｜人員盤點基準 ' + (m.baseDate || '9/30');
   }
 
   /* ---------- 篩選列 ---------- */
@@ -131,11 +131,14 @@
     const el = $('content');
     if (!canSee(S.page)) { el.innerHTML = '<div class="card lock"><h2>🔒 無檢視權限</h2><p>目前身分「' + esc(S.user.role) + '」無法檢視「' + esc(nav ? nav[1] : '') + '」。請切換身分後檢視。</p><button class="btn primary" id="toAdmin">切換為系統管理員</button></div>';
       $('toAdmin').addEventListener('click', () => setUserRole('系統管理員')); return; }
+    const fullP = Store.rangeMonths().length === Store.allMonths().length;
+    const powerPages = ['board', 'overview', 'sa', 'ca', 'power', 'grid', 'ladder', 'rank', 'plants'];
     const page = Pages[S.page];
     if (!page) { el.innerHTML = '<div class="empty">頁面建置中</div>'; return; }
     try {
       const D = Store.derive();
       page(el, D);
+      if (!fullP && S.cfg.scoreSource === 'excel' && powerPages.indexOf(S.page) >= 0) el.insertAdjacentHTML('afterbegin', '<div class="banner info"><b>期間說明</b><span>綜合戰力、PR、排名、九宮格為「期間綜合戰力」（' + Store.monthLabel(Store.allMonths()) + '），不隨所選子期間改變；量能、業績等數值依所選期間重算。各月戰力請見個人分析。</span></div>');
     } catch (e) {
       console.error(e);
       el.innerHTML = '<div class="banner bad"><b>頁面錯誤</b><span>' + esc(e.message) + '</span></div>';
