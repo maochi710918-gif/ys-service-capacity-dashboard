@@ -6,7 +6,7 @@
   const { F, esc, nn, kpi, table, chart, card, C } = UI; const mean = Engine.mean, sum = Engine.sum;
   const Pages = root.Pages;
   const { current, roleName, roleOn, TALENT_COLOR, promoColor } = PX;
-  const isAdmin = () => S.user.role === '系統管理員';
+  const isAdmin = () => S.user.role === '系統管理員' || Store.adminUnlocked();
 
   /* ======================= 9. 人才九宮格 ======================= */
   let gState = { base: 'prev', cell: null };

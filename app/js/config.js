@@ -147,6 +147,9 @@
       { type: '加速培育／資料不足', talents: ['加速培育', '不盤點／資料不足', '資料不足'] }
     ],
 
+    /* ---------- 管理功能密碼鎖（只存 SHA-256(salt+密碼)，不存明碼） ---------- */
+    adminLock: { pages: ['quality', 'import', 'settings', 'perms'], salt: 'ys-dash-admin:', hash: 'a7eaebffc168ae17dad4737ec2dd0c47b869aa8aa1386be01dcfd0b952228055' },
+
     /* ---------- 權限（系統角色） ---------- */
     permissions: {
       '服務部主管': { scope: 'all', pages: '*' },
