@@ -7,7 +7,7 @@
     ['board', '戰力總表', '總覽'], ['overview', '管理總覽', '總覽'], ['plants', '服務廠比較', '總覽'], ['revenue', '廠營收分析', '總覽'], ['sa', '服專分析', '量能分析'], ['utilization', '服專稼動率', '量能分析'], ['ca', '出納分析', '量能分析'],
     ['person', '個人分析', '量能分析'], ['monthly', '月度推移', '量能分析'], ['carage', '車齡結構', '量能分析'], ['retention', '顧客保留率', '量能分析'], ['power', '綜合戰力', '人才盤點'],
     ['grid', '人才九宮格', '人才盤點'], ['ladder', '升階與人才梯隊', '人才盤點'], ['rank', '排行與異常', '人才盤點'], ['quality', '資料品質', '資料與系統'],
-    ['import', '資料匯入', '資料與系統'], ['settings', '指標與權重設定', '資料與系統'], ['perms', '權限管理', '資料與系統']
+    ['import', '資料匯入', '資料與系統'], ['settings', '指標與權重設定', '資料與系統'], ['perms', '權限管理', '資料與系統'], ['audit', '帳號與登入紀錄', '資料與系統']
   ];
   const ADMIN_PAGES = ['import', 'settings', 'perms'];
   const Pages = root.Pages = root.Pages || {};
@@ -206,8 +206,8 @@
   root.App = { renderUserMenu, go, openPerson, render, setRole, setUserRole, askUserRole, NAV, rerender: () => render(true) };
   function renderUserMenu() {
     const u = root.Auth && root.Auth.user(); const el = $('userMenu'); if (!el) return;
-    el.innerHTML = u ? '<span class="um-name" title="' + esc(u.job_title || '') + '">' + esc(u.name || u.account) + '（' + esc(u.account) + '）' + (root.Auth.isAdmin() ? ' <span class="pill red" style="font-size:10.5px">管理員</span>' : '') + '</span><button class="icon-btn theme-btn" id="umPw" title="修改密碼">改密碼</button><button class="icon-btn theme-btn" id="umOut">登出</button>' : '';
-    if (u) { $('umPw').addEventListener('click', () => root.Auth.changePassword()); $('umOut').addEventListener('click', () => root.Auth.logout()); }
+    el.innerHTML = u ? '<span class="um-name" style="cursor:pointer" id="umName" title="帳號與登入紀錄｜' + esc(u.job_title || '') + '">' + esc(u.name || u.account) + '（' + esc(u.account) + '）' + (root.Auth.isAdmin() ? ' <span class="pill red" style="font-size:10.5px">管理員</span>' : '') + '</span><button class="icon-btn theme-btn" id="umPw" title="修改密碼">改密碼</button><button class="icon-btn theme-btn" id="umOut">登出</button>' : '';
+    if (u) { $('umName').addEventListener('click', () => go('audit')); $('umPw').addEventListener('click', () => root.Auth.changePassword()); $('umOut').addEventListener('click', () => root.Auth.logout()); }
     // 角色模擬僅開放管理員；一般帳號固定為服務部主管檢視（無管理頁）
     const isA = root.Auth && root.Auth.isAdmin();
     $('userRole').style.display = isA ? '' : 'none';

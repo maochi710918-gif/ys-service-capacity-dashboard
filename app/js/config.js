@@ -154,9 +154,9 @@
     /* ---------- 權限（系統角色） ---------- */
     permissions: {
       '服務部主管': { scope: 'all', pages: '*' },
-      'HRBP': { scope: 'all', pages: ['board', 'overview', 'sa', 'utilization', 'ca', 'person', 'retention', 'power', 'grid', 'ladder', 'rank', 'quality'] },
-      '廠長': { scope: 'plant', pages: ['board', 'overview', 'plants', 'revenue', 'sa', 'utilization', 'ca', 'person', 'monthly', 'carage', 'retention', 'power', 'grid', 'ladder', 'rank', 'quality'] },
-      '個人': { scope: 'self', pages: ['person', 'monthly', 'retention', 'utilization'] },
+      'HRBP': { scope: 'all', pages: ['audit', 'board', 'overview', 'sa', 'utilization', 'ca', 'person', 'retention', 'power', 'grid', 'ladder', 'rank', 'quality'] },
+      '廠長': { scope: 'plant', pages: ['audit', 'board', 'overview', 'plants', 'revenue', 'sa', 'utilization', 'ca', 'person', 'monthly', 'carage', 'retention', 'power', 'grid', 'ladder', 'rank', 'quality'] },
+      '個人': { scope: 'self', pages: ['audit', 'person', 'monthly', 'retention', 'utilization'] },
       '系統管理員': { scope: 'all', pages: '*' }
     }
   };

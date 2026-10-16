@@ -111,5 +111,5 @@
     }).catch(() => gate('登入服務暫時無法連線，請稍後再試。'));
   }
 
-  root.Auth = { start, logout, user: () => USER, isAdmin: () => !!(USER && USER.role === 'admin' && USER.status === 'active'), changePassword: () => changePassword(false) };
+  root.Auth = { client: () => sb, start, logout, user: () => USER, isAdmin: () => !!(USER && USER.role === 'admin' && USER.status === 'active'), changePassword: () => changePassword(false) };
 })(window);
