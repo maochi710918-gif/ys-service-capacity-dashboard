@@ -48,7 +48,7 @@
   function gate(message) {
     if (!sb) { showGate(box('<div class="auth-err">尚未設定登入連線（Supabase），請聯絡管理員。</div>')); return; }
     showGate(box((message ? '<div class="auth-err">' + esc(message) + '</div>' : '') +
-      '<form id="authForm"><input id="authAcc" type="text" placeholder="帳號" autocomplete="username"><input id="authPw" type="password" placeholder="密碼" autocomplete="current-password"><div class="auth-err" id="authErr"></div><button class="btn primary" id="authBtn" type="submit">登入</button></form>'));
+      '<form id="authForm"><input id="authAcc" type="text" placeholder="帳號" autocomplete="username" autocapitalize="off" spellcheck="false"><input id="authPw" type="password" placeholder="密碼" autocomplete="current-password"><div class="auth-err" id="authErr"></div><button class="btn primary" id="authBtn" type="submit">登入</button></form>'));
     const acc = $('authAcc'), pw = $('authPw'), err = $('authErr'), btn = $('authBtn');
     acc.focus();
     $('authForm').addEventListener('submit', (e) => {
@@ -57,7 +57,14 @@
       if (!a || !p) { err.textContent = '請輸入帳號與密碼'; return; }
       btn.disabled = true; btn.textContent = '登入中...';
       sb.auth.signInWithPassword({ email: email(a), password: p }).then((res) => {
-        if (res.error) { logEvent('login_fail', { account: a }); err.textContent = '帳號或密碼錯誤'; btn.disabled = false; btn.textContent = '登入'; return; }
+        if (res.error) {
+          logEvent('login_fail', { account: a });
+          const code = res.error.code || '', st = res.error.status;
+          err.innerHTML = /rate|too_many/i.test(code + res.error.message) || st === 429 ? '登入嘗試次數過多，請稍候幾分鐘再試。'
+            : !st ? '無法連線登入服務，請確認網路後再試。'
+            : '帳號或密碼錯誤。<br><span class="note">請<b>手動重新輸入</b>目前密碼（瀏覽器自動帶入的可能是改密碼前的舊密碼）。若在戰情中心已改過密碼，請用新密碼。</span>';
+          pw.value = ''; pw.focus(); btn.disabled = false; btn.textContent = '登入'; return;
+        }
         loadProfile().then((u) => {
           if (!u || u.status !== 'active') { err.textContent = u ? '此帳號已被停用，請聯絡管理員' : '找不到帳號資料，請聯絡管理員'; sb.auth.signOut(); btn.disabled = false; btn.textContent = '登入'; return; }
           logEvent('login_success'); resetIdle(); enter();
