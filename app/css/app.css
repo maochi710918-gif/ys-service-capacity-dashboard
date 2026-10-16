@@ -288,6 +288,21 @@ html[data-theme="dark"] .avatar { background: #2b4c80; }
 html[data-theme="dark"] .pill.navy { background: #2b4c80; }
 html[data-theme="dark"] .modal { background: rgba(0,0,0,.6); }
 
+/* ---------------- 登入 ---------------- */
+.auth-gate { display: none; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; background: var(--bg); }
+.auth-box { width: min(380px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px 24px 16px; box-shadow: var(--shadow); }
+.auth-brand { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; }
+.auth-brand b { display: block; font-size: 17px; }
+.auth-brand span { display: block; font-size: 12px; color: var(--muted); }
+.auth-box form { display: flex; flex-direction: column; gap: 10px; }
+.auth-box input { height: 40px; border: 1px solid var(--line-2); border-radius: 8px; padding: 0 12px; font-size: 14px; background: var(--surface); color: var(--ink); }
+.auth-box .btn { height: 40px; justify-content: center; font-size: 14px; font-weight: 700; }
+.auth-err { color: var(--bad); font-size: 12.5px; min-height: 16px; }
+.auth-warn { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; margin-bottom: 10px; }
+.auth-foot { margin: 14px 0 0; text-align: center; }
+.user-menu { display: inline-flex; align-items: center; gap: 6px; }
+.um-name { font-size: 12px; color: #cfe0ff; white-space: nowrap; }
+
 /* ---------------- responsive ---------------- */
 @media (max-width: 1400px) { .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 1100px) {
@@ -300,6 +315,7 @@ html[data-theme="dark"] .modal { background: rgba(0,0,0,.6); }
   .g3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .profile { grid-template-columns: 1fr; }
   .data-stamp { display: none; }
+  .um-name { display: none; }
 }
 @media (max-width: 760px) {
   .topbar { height: auto; flex-wrap: wrap; padding: 8px 12px; gap: 8px; }

@@ -359,15 +359,11 @@
     }
     return H.map((x) => (x >>> 0).toString(16).padStart(8, '0')).join('');
   }
-  const LOCK_KEY = 'ys_dash_admin_unlock';
-  const isLockedPage = (page) => ((S.cfg.adminLock || {}).pages || []).indexOf(page) >= 0;
-  const adminUnlocked = () => { try { return sessionStorage.getItem(LOCK_KEY) === (S.cfg.adminLock || {}).hash; } catch (e) { return false; } };
-  function tryUnlock(pw) {
-    const L = S.cfg.adminLock || {}; const ok = sha256hex(L.salt + String(pw || '')) === L.hash;
-    if (ok) { try { sessionStorage.setItem(LOCK_KEY, L.hash); } catch (e) { } }
-    return ok;
-  }
-  function lockAdmin() { try { sessionStorage.removeItem(LOCK_KEY); } catch (e) { } }
+  // 管理頁：登入帳號 role === 'admin'（Supabase 伺服器端資料）才可進入
+  const isLockedPage = (page) => (S.cfg.adminPages || []).indexOf(page) >= 0;
+  const adminUnlocked = () => !!(root.Auth && root.Auth.isAdmin());
+  const tryUnlock = () => false;
+  const lockAdmin = () => { };
 
   root.Store = {
     isLockedPage, adminUnlocked, tryUnlock, lockAdmin,

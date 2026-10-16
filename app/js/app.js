@@ -29,8 +29,7 @@
     $('nav').innerHTML = h;
     $('nav').querySelectorAll('a').forEach((a) => a.addEventListener('click', () => document.getElementById('app').classList.remove('nav-open')));
     const m = S.model.meta || {};
-    $('sideFoot').innerHTML = (Store.adminUnlocked() ? '<div style="margin-bottom:6px;color:#86efac">🔓 管理功能已解鎖 <button class="btn sm" id="adminLogout" style="margin-left:6px">登出</button></div>' : '') + '資料：' + esc(m.fileName || '—') + '<br>' + (S.source === 'import' ? '來源：使用者匯入' : '來源：預設Excel') + '　期間 ' + Store.monthLabel(Store.allMonths());
-    const lo = document.getElementById('adminLogout'); if (lo) lo.addEventListener('click', () => { Store.lockAdmin(); UI.toast('已登出管理功能'); render(); });
+    $('sideFoot').innerHTML = '資料：' + esc(m.fileName || '—') + '<br>' + (S.source === 'import' ? '來源：使用者匯入' : '來源：預設Excel') + '　期間 ' + Store.monthLabel(Store.allMonths());
     $('dataStamp').textContent = (m.version ? '資料版本 ' + m.version + '｜' : '') + '分析期間 ' + Store.monthLabel(Store.allMonths()) + '｜人員盤點基準 ' + (m.baseDate || '9/30');
   }
 
@@ -131,11 +130,7 @@
     document.title = (nav ? nav[1] + '｜' : '') + '服專出納戰情儀表板';
     const el = $('content');
     if (Store.isLockedPage(S.page) && !Store.adminUnlocked()) {
-      el.innerHTML = '<div class="card lock" style="max-width:420px;margin:40px auto;text-align:center"><h2 style="margin-top:0">🔒 管理功能</h2><p>「' + esc(nav ? nav[1] : '') + '」需輸入管理密碼。</p>' +
-        '<form id="adminForm" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><input type="password" id="adminPw" autocomplete="current-password" placeholder="管理密碼" style="height:34px;border:1px solid var(--line-2);border-radius:6px;padding:0 10px;background:var(--surface);color:var(--ink);min-width:200px"><button class="btn primary" type="submit" style="height:34px">登入</button></form>' +
-        '<p class="note" id="adminMsg" style="min-height:18px"></p><p class="note">登入後本次瀏覽期間有效；關閉分頁或按「登出」即重新上鎖。</p></div>';
-      const pw = $('adminPw'); pw.focus();
-      $('adminForm').addEventListener('submit', (e) => { e.preventDefault(); if (Store.tryUnlock(pw.value)) { UI.toast('已解鎖管理功能'); render(true); } else { $('adminMsg').innerHTML = '<span class="down">密碼錯誤</span>'; pw.value = ''; pw.focus(); } });
+      el.innerHTML = '<div class="card lock" style="max-width:460px;margin:40px auto;text-align:center"><h2 style="margin-top:0">🔒 需管理員權限</h2><p>「' + esc(nav ? nav[1] : '') + '」僅限管理員帳號使用。</p><p class="note">權限依「售服績效戰情中心 › 帳號與權限管理」設定；如需開通請洽管理員。</p></div>';
       return;
     }
     if (!canSee(S.page)) { el.innerHTML = '<div class="card lock"><h2>🔒 無檢視權限</h2><p>目前身分「' + esc(S.user.role) + '」無法檢視「' + esc(nav ? nav[1] : '') + '」。請切換身分後檢視。</p><button class="btn primary" id="toAdmin">切換為系統管理員</button></div>';
@@ -186,6 +181,7 @@
 
   function boot() {
     Store.init();
+    renderUserMenu();
     parseHash();
     renderUserRole();
     $('userRole').addEventListener('change', (e) => { const r = e.target.value; renderUserRole(); e.target.value = S.user.role; askUserRole(r); });
@@ -207,6 +203,16 @@
     render(true);
   }
 
-  root.App = { go, openPerson, render, setRole, setUserRole, askUserRole, NAV, rerender: () => render(true) };
-  document.addEventListener('DOMContentLoaded', boot);
+  root.App = { renderUserMenu, go, openPerson, render, setRole, setUserRole, askUserRole, NAV, rerender: () => render(true) };
+  function renderUserMenu() {
+    const u = root.Auth && root.Auth.user(); const el = $('userMenu'); if (!el) return;
+    el.innerHTML = u ? '<span class="um-name" title="' + esc(u.job_title || '') + '">' + esc(u.name || u.account) + '（' + esc(u.account) + '）' + (root.Auth.isAdmin() ? ' <span class="pill red" style="font-size:10.5px">管理員</span>' : '') + '</span><button class="icon-btn theme-btn" id="umPw" title="修改密碼">改密碼</button><button class="icon-btn theme-btn" id="umOut">登出</button>' : '';
+    if (u) { $('umPw').addEventListener('click', () => root.Auth.changePassword()); $('umOut').addEventListener('click', () => root.Auth.logout()); }
+    // 角色模擬僅開放管理員；一般帳號固定為服務部主管檢視（無管理頁）
+    const isA = root.Auth && root.Auth.isAdmin();
+    $('userRole').style.display = isA ? '' : 'none';
+    if (!isA && S.user.role !== '服務部主管') { S.user = { role: '服務部主管', plant: '', self: '' }; }
+    if (isA && !S.userInit) { S.userInit = true; if (!localStorage.getItem('ys_dash_user')) S.user.role = '系統管理員'; }
+  }
+  document.addEventListener('DOMContentLoaded', () => { if (root.Auth) root.Auth.start(() => { boot(); }); else boot(); });
 })(window);

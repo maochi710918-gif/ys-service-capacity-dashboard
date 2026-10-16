@@ -147,8 +147,9 @@
       { type: '加速培育／資料不足', talents: ['加速培育', '不盤點／資料不足', '資料不足'] }
     ],
 
-    /* ---------- 管理功能密碼鎖（只存 SHA-256(salt+密碼)，不存明碼） ---------- */
-    adminLock: { pages: ['quality', 'import', 'settings', 'perms'], salt: 'ys-dash-admin:', hash: 'a7eaebffc168ae17dad4737ec2dd0c47b869aa8aa1386be01dcfd0b952228055' },
+    /* ---------- 帳號登入（與「售服績效戰情中心」共用 Supabase 帳號；publishable key 為瀏覽器端公開金鑰） ---------- */
+    auth: { supabaseUrl: 'https://lhkdnfrareofawkdmunz.supabase.co', publishableKey: 'sb_publishable_eSEri2_WtVda1a7BbzZzgg_2BpFZJDu', emailDomain: '@yuxin.internal', idleMinutes: 30, appName: '服專出納服務量能儀表板' },
+    adminPages: ['quality', 'import', 'settings', 'perms'],
 
     /* ---------- 權限（系統角色） ---------- */
     permissions: {
