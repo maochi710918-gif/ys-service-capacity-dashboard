@@ -57,10 +57,16 @@
     opts = opts || {};
     const map = APP_CONFIG.FIELD_MAP[role === 'SA' ? '服專總覽' : '出納總覽'].cols;
     const H = hdr(role);
+    const sheet = SHEET[role], order = ((S.model && S.model.order) || {})[sheet], groups = ((S.model && S.model.groups) || {})[sheet];
     let keys = Object.values(map);
-    if (H) keys = keys.filter((k) => H[k] || k === 'name' || k === 'plant').concat(EXTRA_KEYS.filter((k) => H[k]));
-    // 「任職／實績月數」放在原「有效月份」位置
-    if (H && H.employMonths && !H.validMonths) { keys = keys.filter((k) => k !== 'employMonths'); keys.splice(4, 0, 'employMonths'); }
+    if (order && groups && Object.keys(groups).length) {
+      // 10.17 版：依 Excel 欄位順序；技術檢核欄、原檔保留空白欄不顯示
+      keys = order.filter((k) => !/技術檢核|保留空白/.test(groups[k] || '') && k !== '_row');
+      if (opts.groupFilter) keys = keys.filter((k) => k === 'name' || opts.groupFilter(groups[k] || ''));
+    } else {
+      if (H) keys = keys.filter((k) => H[k] || k === 'name' || k === 'plant').concat(EXTRA_KEYS.filter((k) => H[k]));
+      if (H && H.employMonths && !H.validMonths) { keys = keys.filter((k) => k !== 'employMonths'); keys.splice(4, 0, 'employMonths'); }
+    }
     return keys.map((k) => {
       const c = { key: k, label: label(role, k), num: isNum(k), fmt: fmtOf(k), cls: (r, v) => colorCell(k, v) };
       if (k === 'name') { c.sticky = true; c.html = (r) => UI.nameLink(r); }
@@ -73,6 +79,10 @@
       if (['avgBasis', 'coverage', 'reviewStatus', 'knownMonths', 'carMonths', 'revMonths', 'orderMonths', 'csiMonths', 'esignLast'].indexOf(k) >= 0 && !c.get) c.get = (r) => r.excel ? r.excel[k] : null;
       if (k === 'esignLast') c.fmt = F.pct;
       if (k === 'avgBasis' || k === 'coverage') { c.wrap = true; c.fmt = F.text; c.num = false; }
+      if (!c.get && groups && groups[k] && ['name', 'plant', 'license', 'years', 'status', 'position', 'advice'].indexOf(k) < 0) c.get = (r) => (r[k] != null ? r[k] : r.excel ? r.excel[k] : null);
+      if (/^(beauty|ys|yr|oil|chem|nvs)(Rate)$/.test(k) || k === 'bodyPaintLast') c.fmt = F.pct2;
+      if (k === 'yrPer100' || k === 'ysPer100') c.fmt = F.d2;
+      c.group = groups ? groups[k] || '' : '';
       return c;
     }).concat(opts.extra || []);
   }
@@ -123,7 +133,8 @@
   function bindCharts(el) { return (sel) => el.querySelector(sel); }
   function wireExport(el, id, name, t) { UI.bindExport(el, id, name, () => t); }
 
-  root.PX = { fmtOf, label, roleName, roleOn, current, personColumns, consecutiveDecline, company, buildAlerts, plantShortage, kpiMonthly, colSum, colMean, activeCount, TALENT_COLOR, promoColor, colorCell, wireExport };
+  const groupsOf = (role) => { const g = ((S.model && S.model.groups) || {})[SHEET[role]] || {}; const seen = []; ((S.model.order || {})[SHEET[role]] || []).forEach((k) => { const v = g[k]; if (v && seen.indexOf(v) < 0 && !/技術檢核|保留空白/.test(v)) seen.push(v); }); return seen; };
+  root.PX = { groupsOf, fmtOf, label, roleName, roleOn, current, personColumns, consecutiveDecline, company, buildAlerts, plantShortage, kpiMonthly, colSum, colMean, activeCount, TALENT_COLOR, promoColor, colorCell, wireExport };
 
   /* ======================= 1. 管理總覽 ======================= */
   Pages.overview = function (el, D) {
@@ -396,9 +407,27 @@
         card('量能PR × 服務品質PR', '<div class="chart" id="q1"></div>', { sub: '點大小＝綜合戰力；右上＝量質兼具' }) +
         card('綜合戰力分布', '<div class="chart" id="q2"></div>', { sub: '依證照級別' }) + '</div>' +
         '<div class="section-title">' + roleName(role) + '明細表</div>' +
-        card(roleName(role) + '明細（' + list.length + '人，現行 ' + cur.length + ' 人）', '<div id="rt"></div>', { tools: UI.exportBtns('rt'), flush: true });
-      const extra = role === 'SA' ? [{ key: 'capacityRate', label: '接車量能達成率', num: true, fmt: F.pct2 }] : [];
-      const t = table(el.querySelector('#rt'), { columns: personColumns(role, { extra }), rows: list, sortKey: 'power', onRow: (p) => root.App.openPerson(p.id), rowClass: (p) => p.status !== '現行' ? 'hist' : '' });
+        card(roleName(role) + '明細（總覽現職名單 ' + list.length + ' 人，現行 ' + cur.length + ' 人）', '<div class="grp-chips" id="grpChips"></div><div id="rt"></div>', { tools: UI.exportBtns('rt'), flush: true, sub: '依最新總覽保留名單；歷史人員實績仍計入月度與全期統計' });
+      const G = groupsOf(role);
+      const GK = 'ys_dash_groups_' + role;
+      let on; try { on = JSON.parse(localStorage.getItem(GK) || 'null'); } catch (e) { on = null; }
+      if (!Array.isArray(on)) on = G.slice(0, 3);
+      const drawT = () => {
+        const chips = el.querySelector('#grpChips');
+        if (chips && G.length) {
+          chips.innerHTML = '<span class="note">欄位群組：</span>' + G.map((g) => '<button data-g="' + esc(g) + '" class="' + (on.indexOf(g) >= 0 ? 'on' : '') + '">' + esc(g) + '</button>').join('') + '<button data-all="1">全部展開</button><button data-none="1">全部收合</button>';
+          chips.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+            if (b.dataset.all) on = G.slice(); else if (b.dataset.none) on = G.slice(0, 1); else { const g = b.dataset.g; on = on.indexOf(g) >= 0 ? on.filter((x) => x !== g) : on.concat([g]); }
+            try { localStorage.setItem(GK, JSON.stringify(on)); } catch (e) { } drawT();
+          }));
+        }
+        const extra = role === 'SA' && !G.length ? [{ key: 'capacityRate', label: '接車量能達成率', num: true, fmt: F.pct2 }] : [];
+        const cols = personColumns(role, { extra, groupFilter: G.length ? (g) => on.indexOf(g) >= 0 : null });
+        tt = table(el.querySelector('#rt'), { columns: cols, rows: list, sortKey: 'power', onRow: (p) => root.App.openPerson(p.id), rowClass: (p) => p.status !== '現行' ? 'hist' : '', groupOf: G.length ? (c) => c.group : null });
+      };
+      let tt; drawT();
+      const t = { columns: null, exportRows: () => tt.exportRows() };
+      Object.defineProperty(t, 'columns', { get: () => tt.columns });
       UI.bindExport(el, 'rt', roleName(role) + '明細', t);
       const pts = cur.filter((p) => nn(p.prVolume) && nn(p.prService));
       chart(el.querySelector('#q1'), {

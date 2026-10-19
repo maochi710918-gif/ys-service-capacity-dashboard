@@ -61,9 +61,9 @@
       '<div class="k-v">' + (nn(o.value) ? f(o.value) : '—') + (o.unit && nn(o.value) ? '<small>' + o.unit + '</small>' : '') + '</div>' +
       '<div class="k-cmp">' +
       row(o.curLabel || '本期', nn(o.cur) ? (o.curFmt || sf)(o.cur) : '—') +
-      row(o.prevLabel || '上期', nn(o.prev) ? sf(o.prev) : '—') +
-      row('增減', nn(delta) ? (delta > 0 ? '+' : '') + df(delta) + (nn(rate) ? '（' + F.pctSigned(rate) + '）' : '') : '—', dcls) +
-      row(o.companyLabel || '全公司', nn(o.company) ? sf(o.company) : '—') +
+      (o.noPrev ? '' : row(o.prevLabel || '上期', nn(o.prev) ? sf(o.prev) : '—') +
+      row('增減', nn(delta) ? (delta > 0 ? '+' : '') + df(delta) + (nn(rate) ? '（' + F.pctSigned(rate) + '）' : '') : '—', dcls)) +
+      (o.noPrev && !nn(o.company) ? '' : row(o.companyLabel || '全公司', nn(o.company) ? (o.companyFmt || sf)(o.company) : '—')) +
       '</div></div>';
   }
 
@@ -82,6 +82,11 @@
           return (typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb), 'zh-Hant')) * st.sortDir;
         });
       }
+      let gh = '';
+      if (opts.groupOf) {
+        const segs = []; opts.columns.forEach((c) => { const g = opts.groupOf(c) || ''; if (segs.length && segs[segs.length - 1].g === g) segs[segs.length - 1].n++; else segs.push({ g, n: 1 }); });
+        gh = '<tr class="grp-row">' + segs.map((s) => '<th colspan="' + s.n + '" class="grp">' + esc(s.g) + '</th>').join('') + '</tr>';
+      }
       const th = opts.columns.map((c) => '<th data-k="' + c.key + '" class="' + (c.num ? 'num ' : '') + (c.sticky ? 'sticky ' : '') + (st.sortKey === c.key ? 'sorted' : '') + '">' + esc(c.label) + '<span class="arr">' + (st.sortKey === c.key ? (st.sortDir > 0 ? '▲' : '▼') : '⇅') + '</span></th>').join('');
       const cell = (c, r) => {
         const v = c.get ? c.get(r) : r[c.key];
@@ -91,7 +96,7 @@
       };
       const body = rows.map((r, i) => '<tr data-i="' + i + '" class="' + (opts.onRow ? 'click ' : '') + (opts.rowClass ? opts.rowClass(r) : '') + '">' + opts.columns.map((c) => cell(c, r)).join('') + '</tr>').join('');
       const avg = opts.avgRow ? '<tr class="avg">' + opts.columns.map((c) => cell(c, opts.avgRow)).join('') + '</tr>' : '';
-      el.innerHTML = '<div class="tbl-wrap ' + (opts.short ? 'short' : '') + '"><table class="tbl"><thead><tr>' + th + '</tr></thead><tbody>' + (body || '<tr><td colspan="' + opts.columns.length + '" class="empty">無符合條件的資料</td></tr>') + avg + '</tbody></table></div>' +
+      el.innerHTML = '<div class="tbl-wrap ' + (opts.short ? 'short' : '') + '"><table class="tbl"><thead>' + gh + '<tr>' + th + '</tr></thead><tbody>' + (body || '<tr><td colspan="' + opts.columns.length + '" class="empty">無符合條件的資料</td></tr>') + avg + '</tbody></table></div>' +
         (opts.footer === false ? '' : '<div class="tbl-foot"><span>共 ' + rows.length + ' 筆</span><span>點欄位標題可排序' + (opts.onRow ? '；點列可下鑽' : '') + '</span></div>');
       el.querySelectorAll('th').forEach((h) => h.addEventListener('click', () => {
         const k = h.dataset.k;

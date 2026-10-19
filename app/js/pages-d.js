@@ -82,7 +82,7 @@
 
     el.innerHTML = '<div class="page-head"><div><h1>戰力總表｜專家會同版</h1><p>期間 ' + Store.monthLabel(D.months) + (S.filters.plant ? '｜' + esc(S.filters.plant) : '｜全公司') + '　一頁看懂：服務廠戰力 → 個人全排名 → 出納貢獻 → 顧客滿意</p></div>' +
       '<div style="display:flex;gap:6px"><button class="btn" onclick="window.print()">🖨 列印會議版</button></div></div>' +
-      '<div class="guide"><b>怎麼讀</b><span>① <b>綜合戰力</b>0–100：同職務現行人員中的相對位置（量能、效率、品質、作業加權），≥' + T.highPower + ' 高、' + T.midPower + '–' + (T.highPower - 0.01) + ' 中、<' + T.midPower + ' 低。</span><span>② <b>廠戰力</b>＝該廠現行服專＋出納綜合戰力平均（依人數）。</span><span>③ <b>顧客滿意</b>取自 ' + esc(csiNote) + '。</span><span>④ 綜合戰力為管理診斷，非正式考核分數。</span></div>' +
+      '<div class="guide"><b>怎麼讀</b><span>① <b>綜合戰力</b>0–100：同職務現行人員中的相對位置（服專：量能20、營收效率10、返廠促進10、客戶指定10、服務品質20、作業品質10、招攬20；出納：量能25、數位流程15、服務品質25、感心卡10、作業品質15、招攬10），≥' + T.highPower + ' 高、' + T.midPower + '–' + (T.highPower - 0.01) + ' 中、<' + T.midPower + ' 低。</span><span>② <b>廠戰力</b>＝該廠現行服專＋出納綜合戰力平均（依人數）。</span><span>③ <b>顧客滿意</b>取自 ' + esc(csiNote) + '。</span><span>④ <b>招攬</b>：服專 7 項各 1/7、出納裕信／裕日護照每100張工單本數各 50%。</span><span>⑤ <b>資格</b>：現職、滿 3 個有效服務月且必要資料齊備才列入戰力、排名、九宮格與職涯階梯；同值共用分數、全員同值＝50%、單一樣本不排名。</span><span>⑥ <b>缺值</b>不當 0、不補零；顯示「—」。</span><span>⑦ 綜合戰力為管理診斷，非正式考核分數。</span></div>' +
       '<div class="btiles">' +
       tile('全公司平均戰力', F.score(coPower), '現行 ' + (saAll.length + caAll.length) + ' 人計分', powColor(coPower)) +
       tile('戰力第一服務廠', tPl ? esc(tPl.plant) : '—', tPl ? '廠戰力 ' + F.score(tPl.power) : '', 'var(--navy-700)') +

@@ -22,7 +22,9 @@
 
   /* ---------- 載入 ---------- */
   function loadModel() {
-    const saved = lsGet(LS.model);
+    let saved = lsGet(LS.model);
+    const rawM = (root.RAW_MODEL && root.RAW_MODEL.meta) || {};
+    if (saved && saved.model && saved.model.meta && rawM.importedAt && String(saved.model.meta.importedAt || '') < String(rawM.importedAt)) { lsDel(LS.model); saved = null; }
     if (saved && saved.model) { S.model = saved.model; S.report = saved.report; S.source = 'import'; }
     else { S.model = clone(root.RAW_MODEL); S.report = root.RAW_REPORT; S.source = 'default'; }
   }

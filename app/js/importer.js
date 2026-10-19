@@ -38,6 +38,12 @@
     report.headers = report.headers || {};
     const hm = report.headers[sheetName] = {};
     rows[hIdx].forEach((h, i) => { const k = mapClean[clean(h)]; if (k && colIndex[k] === i) hm[k] = String(h).replace(/\n/g, ''); });
+    // 欄位群組（表頭上一列，如「01｜基本資料與狀態」）與 Excel 欄位順序
+    report.groups = report.groups || {}; report.order = report.order || {};
+    const grow = hIdx > 0 ? rows[hIdx - 1] || [] : [];
+    const isGroupRow = grow.filter((c) => typeof c === 'string' && /^\d{2}｜/.test(c)).length >= 3;
+    report.order[sheetName] = Object.keys(colIndex).sort((a, b) => colIndex[a] - colIndex[b]);
+    if (isGroupRow) { const gm = report.groups[sheetName] = {}; Object.keys(colIndex).forEach((k) => { const g = grow[colIndex[k]]; if (g) gm[k] = String(g).trim(); }); }
     const out = [];
     for (let r = hIdx + 1; r < rows.length; r++) {
       const row = rows[r];
@@ -46,7 +52,7 @@
       Object.keys(colIndex).forEach((key) => {
         let v = row[colIndex[key]];
         if (isBlank(v)) v = null;
-        else if (typeof v === 'string') v = v.trim();
+        else if (typeof v === 'string') { v = v.trim(); if (/^-?\d+(\.\d+)?(e-?\d+)?$/i.test(v) && key !== 'name' && key !== 'month') v = Number(v); }
         o[key] = v;
       });
       out.push(o);
@@ -141,6 +147,8 @@
     const sources = parseTable(XLSX, wb, '資料來源', M['資料來源'], report);
     const solicit = parseTable(XLSX, wb, '招攬總覽', M['招攬總覽'], report);
     const monthlyPower = parseTable(XLSX, wb, '月度戰力', M['月度戰力'], report);
+    const loadShare = parseTable(XLSX, wb, '廠內負荷分擔', M['廠內負荷分擔'], report);
+    loadShare.forEach((r) => { r.month = normMonth(r.month); });
     monthlyPower.forEach((r) => { r.month = normMonth(r.month); });
     const weights = parseWeights(XLSX, wb, report);
     const gridRef = parseGridSheet(XLSX, wb);
@@ -208,8 +216,8 @@
     const model = {
       meta: { fileName: fileName || '', importedAt: new Date().toISOString(), note: overview ? overview.note : '', months,
         version: (() => { const m = String(fileName || '').match(/(\d{4}\.\d{1,2}\.\d{1,2})版?\s*(v\d+)?/i); return m ? m[1] + (m[2] ? ' ' + m[2] : '') : ''; })(), baseDate: '9/30' },
-      saPeople, caPeople, saMonthly, caMonthly, plants, plantMonthly, checks, definitions, sources, solicit, monthlyPower,
-      headers: report.headers || {}, excelWeights: weights, gridRef, overviewRef: overview ? overview.ref : {}, overviewMonthly: overview ? overview.monthly : [], plantMismatch: mismatch
+      saPeople, caPeople, saMonthly, caMonthly, plants, plantMonthly, checks, definitions, sources, solicit, monthlyPower, loadShare,
+      headers: report.headers || {}, groups: report.groups || {}, order: report.order || {}, excelWeights: weights, gridRef, overviewRef: overview ? overview.ref : {}, overviewMonthly: overview ? overview.monthly : [], plantMismatch: mismatch
     };
     return { model, report };
   }

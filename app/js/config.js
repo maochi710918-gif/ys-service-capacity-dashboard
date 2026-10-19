@@ -154,8 +154,8 @@
     /* ---------- 權限（系統角色） ---------- */
     permissions: {
       '服務部主管': { scope: 'all', pages: '*' },
-      'HRBP': { scope: 'all', pages: ['audit', 'board', 'overview', 'sa', 'utilization', 'ca', 'person', 'retention', 'power', 'grid', 'ladder', 'rank', 'quality'] },
-      '廠長': { scope: 'plant', pages: ['audit', 'board', 'overview', 'plants', 'revenue', 'sa', 'utilization', 'ca', 'person', 'monthly', 'carage', 'retention', 'power', 'grid', 'ladder', 'rank', 'quality'] },
+      'HRBP': { scope: 'all', pages: ['audit', 'solicit', 'board', 'overview', 'sa', 'utilization', 'ca', 'person', 'retention', 'power', 'grid', 'ladder', 'rank', 'quality'] },
+      '廠長': { scope: 'plant', pages: ['audit', 'solicit', 'board', 'overview', 'plants', 'revenue', 'sa', 'utilization', 'ca', 'person', 'monthly', 'carage', 'retention', 'power', 'grid', 'ladder', 'rank', 'quality'] },
       '個人': { scope: 'self', pages: ['audit', 'person', 'monthly', 'retention', 'utilization'] },
       '系統管理員': { scope: 'all', pages: '*' }
     }
@@ -226,7 +226,7 @@
     },
     '招攬總覽': {
       optional: true, headerKey: '職務', required: ['職務', '姓名'],
-      cols: { '職務': 'roleName', '最新廠別': 'plant', '姓名': 'name', '人員狀態': 'status', '服務有效月數': 'serviceMonths', '美容累積實績': 'beauty', '美容配對實績': 'beautyPA', '美容配對目標': 'beautyPT', '美容達成率': 'beautyRate',
+      cols: { '職務': 'roleName', '最新廠別': 'plant', '姓名': 'name', '人員狀態': 'status', '服務有效月數': 'serviceMonths', '美容資料月數': 'beautyMonths', '裕信資料月數': 'ysMonths', '裕日資料月數': 'yrMonths', '油品有效月數': 'oilMonths', '化品有效月數': 'chemMonths', 'NVS有效月數': 'nvsMonths', '裕日配對工作量': 'yrBase', '裕信配對工作量': 'ysBase', '裕信有目標月實績': 'ysPA', '美容月平均': 'beautyAvg', '裕信月平均本數': 'ysAvg', '裕日月平均本數': 'yrAvg', 'NVS月平均實績': 'nvsAvg', 'NVS去重定保台數': 'nvsCars', 'NVS單台': 'nvsPerCar', '美容累積實績': 'beauty', '美容配對實績': 'beautyPA', '美容配對目標': 'beautyPT', '美容達成率': 'beautyRate',
         '裕信累積本數': 'ysBooks', '裕信累積目標': 'ysTarget', '裕信達成率': 'ysRate', '裕日累積本數': 'yrBooks', '裕日每100件本數': 'yrPer100', '裕信每100件本數': 'ysPer100', 'S餐使用台數': 'oilUsed', 'S餐對象台數': 'oilBase', '累積S餐使用率': 'oilRate',
         '化品OK台數': 'chemOk', '化品對象台數': 'chemBase', '累積化品OK率': 'chemRate', 'NVS累積實績': 'nvs', 'NVS累積目標': 'nvsTarget', 'NVS達成率': 'nvsRate', '鈑噴達成率': 'bodyRate', '招攬PR': 'prSolicit', '招攬資料狀態': 'solicitStatus', '候選資格': 'candidate',
         '美容PR': 'prBeauty', '裕信PR': 'prYs', '裕日PR': 'prYr', '油品PR': 'prOil', '化品PR': 'prChem', 'NVSPR': 'prNvs', '鈑噴PR': 'prBody', '資料涵蓋月份': 'coverage' }
@@ -234,7 +234,12 @@
     '月度戰力': {
       optional: true, headerKey: '月份', required: ['月份', '職務', '姓名', '綜合戰力'],
       cols: { '月份': 'month', '職務': 'roleName', '最新廠別': 'plant', '姓名': 'name', '綜合戰力': 'power', '當月排名': 'rank', '資料狀態': 'status', '量能PR': 'prVolume', '營收效率PR': 'prRevenue', '返廠促進PR': 'prRetention', '客戶指定PR': 'prDesignate',
-        '服務品質PR': 'prService', '作業品質PR': 'prOps', '招攬PR': 'prSolicit', '電子簽名PR': 'prDigital', '感心卡PR': 'prCard', '基準日均量': 'dailyBase', '期間服務月數': 'serviceMonths' }
+        '服務品質PR': 'prService', '作業品質PR': 'prOps', '招攬PR': 'prSolicit', '電子簽名PR': 'prDigital', '感心卡PR': 'prCard', '基準日均量': 'dailyBase', '期間服務月數': 'serviceMonths',
+        '日均量原值': 'dailyRaw', '單車產值': 'perCar', 'CSI': 'csi', '首回CSI': 'csiFirst', 'ES自主': 'esSelf', '電子簽名率': 'esign', '感心卡核卡': 'card', '候選資格': 'candidate', '戰力數值有效': 'powerValid' }
+    },
+    '廠內負荷分擔': {
+      optional: true, headerKey: '月份', required: ['月份', '姓名'],
+      cols: { '月份': 'month', '實際服務廠': 'plant', '服務業務': 'roleName', '姓名': 'name', '現職／人員狀態': 'position', '承接工作量': 'work', '廠內同業務個人量': 'plantTotal', '負荷分擔比例': 'share', '支援標示': 'tag', '歸屬說明': 'note' }
     },
     '資料檢核': {
       headerKey: '層級', required: ['層級', '檢核項目', '發現', '本次處理'],
@@ -252,9 +257,9 @@
 
   /* 欄位別名／新增欄位（新版 Excel 改名或新增時，舊版欄位仍可讀） */
   const FIELD_ALIASES = {
-    '服專總覽': { '招攬PR': 'prSolicit', '公司基準日均量': 'dailyBase', '月度戰力平均': 'monthlyPowerAvg', '正式排名資料狀態': 'rankStatus', '8月鈑噴營收達成率': 'bodyPaintLast', '接車PR': 'prCars', '業績PR': 'prRev', '單車產值PR': 'prPerCar', '鈑噴達成PR': 'prBody', 'A1PR': 'prA1', 'A2PR': 'prA2', 'APPPR': 'prApp', 'ES再指定PR': 'prEsR', 'CSIPR': 'prCsi', '首回CSIPR': 'prCsiFirst', 'ES自主PR': 'prEsSelf', '收費NG反向PR': 'prNgFee', '時間NG反向PR': 'prNgTime', '解金鑰反向PR': 'prKeyInv', '任職／實績月數': 'employMonths', '>3且<8年佔比': 'age38', '≥8年佔比': 'age8', '自費鈑噴營收達成率': 'bodyPaint', 'CSI均值差(6–8比3–5月)': 'trendCsi',
+    '服專總覽': { '現職職務': 'position', '同證照戰力PR': 'prLicense', '同年資戰力PR': 'prTenure', '同證照戰力差（分）': 'licenseGap', '公司基準日均接車台數': 'dailyBase', '月度戰力平均（參考）': 'monthlyPowerAvg', '招攬執行PR': 'prSolicit', '公司基準日均接車PR': 'prCars', '月均業績PR（參考）': 'prRev', '美容達成率': 'beautyRate', '裕信護照達成率': 'ysRate', '裕日護照每100台接車本數': 'yrPer100', 'S餐油品使用率': 'oilRate', '化學品OK率': 'chemRate', 'NVS達成率': 'nvsRate', '8月鈑噴達成率（單月）': 'bodyPaintLast', '美容達成率PR': 'prBeauty', '裕信護照達成率PR': 'prYs', '裕日護照密度PR': 'prYr', 'S餐油品使用率PR': 'prOil', '化學品OK率PR': 'prChem', 'NVS達成率PR': 'prNvs', '招攬來源資料狀態': 'solicitStatus', '現職滿3服務月': 'has3', '日均量有效': 'dailyValid', '招攬PR有效': 'solicitValid', '招攬PR': 'prSolicit', '公司基準日均量': 'dailyBase', '月度戰力平均': 'monthlyPowerAvg', '正式排名資料狀態': 'rankStatus', '8月鈑噴營收達成率': 'bodyPaintLast', '接車PR': 'prCars', '業績PR': 'prRev', '單車產值PR': 'prPerCar', '鈑噴達成PR': 'prBody', 'A1PR': 'prA1', 'A2PR': 'prA2', 'APPPR': 'prApp', 'ES再指定PR': 'prEsR', 'CSIPR': 'prCsi', '首回CSIPR': 'prCsiFirst', 'ES自主PR': 'prEsSelf', '收費NG反向PR': 'prNgFee', '時間NG反向PR': 'prNgTime', '解金鑰反向PR': 'prKeyInv', '任職／實績月數': 'employMonths', '>3且<8年佔比': 'age38', '≥8年佔比': 'age8', '自費鈑噴營收達成率': 'bodyPaint', 'CSI均值差(6–8比3–5月)': 'trendCsi',
       '到職日': 'hireDate', '平均計算依據': 'avgBasis', '資料涵蓋月份': 'coverage', '已知任職月數': 'knownMonths', '接車有效月份': 'carMonths', '業績有效月份': 'revMonths', 'CSI有效月份': 'csiMonths', '盤點資料狀態': 'reviewStatus' },
-    '出納總覽': { '招攬PR': 'prSolicit', '公司基準日均量': 'dailyBase', '月度戰力平均': 'monthlyPowerAvg', '正式排名資料狀態': 'rankStatus', '結帳PR': 'prOrders', '電子簽名PR': 'prEsign', 'CSIPR': 'prCsi', '首回CSIPR': 'prCsiFirst', 'ES自主PR': 'prEsSelf', '收費NG反向PR': 'prNgFee', '解金鑰反向PR': 'prKeyInv', '任職／實績月數': 'employMonths', '月平均電子簽名率': 'esign', 'CSI均值差(6–8比3–5月)': 'trendCsi',
+    '出納總覽': { '現職職務': 'position', '同證照戰力PR': 'prLicense', '同年資戰力PR': 'prTenure', '同證照戰力差（分）': 'licenseGap', '公司基準日均結帳張數': 'dailyBase', '月度戰力平均（參考）': 'monthlyPowerAvg', '招攬執行PR': 'prSolicit', '9月電子簽名率（單月）': 'esignLast', '裕信護照累積本數': 'ysBooks', '裕信護照月均本數': 'ysAvg', '裕信護照每100張工單本數': 'ysPer100', '裕日護照累積本數': 'yrBooks', '裕日護照月均本數': 'yrAvg', '裕日護照每100張工單本數': 'yrPer100', '所屬廠CSI樣本指標（廠級背景）': 'plantCsiSample', '公司基準日均結帳PR': 'prOrders', '裕信護照密度PR': 'prYs', '裕日護照密度PR': 'prYr', '招攬來源資料狀態': 'solicitStatus', '現職滿3服務月': 'has3', '日均量有效': 'dailyValid', '招攬PR有效': 'solicitValid', '招攬PR': 'prSolicit', '公司基準日均量': 'dailyBase', '月度戰力平均': 'monthlyPowerAvg', '正式排名資料狀態': 'rankStatus', '結帳PR': 'prOrders', '電子簽名PR': 'prEsign', 'CSIPR': 'prCsi', '首回CSIPR': 'prCsiFirst', 'ES自主PR': 'prEsSelf', '收費NG反向PR': 'prNgFee', '解金鑰反向PR': 'prKeyInv', '任職／實績月數': 'employMonths', '月平均電子簽名率': 'esign', 'CSI均值差(6–8比3–5月)': 'trendCsi',
       '到職日': 'hireDate', '平均計算依據': 'avgBasis', '資料涵蓋月份': 'coverage', '已知任職月數': 'knownMonths', '結帳有效月份': 'orderMonths', 'CSI有效月份': 'csiMonths', '盤點資料狀態': 'reviewStatus', '9月電子簽名率': 'esignLast' },
     '服專月度明細': { '>3且<8年台數': 'cars38', '≥8年台數': 'cars8', '自費鈑噴營收達成率': 'bodyPaint', 'APP指定次數': 'appCount', 'APP同來源接車數': 'appBase', '跨廠支援／實際分布': 'support',
       '廠工作天數': 'workdays', '公司基準工作日': 'workdays', '公司基準日均服務量': 'daily', '量能配對基準工作日': 'workdaysPair', '工作量數值有效': 'workValid', '日均接車(廠工作日)': 'daily', '標準量能達成率': 'capRate', '資料涵蓋說明': 'coverNote', '任職月份旗標': 'employedFlag', '業績來源廠別': 'revPlant' },
@@ -264,7 +269,7 @@
       '1–9月累積廠營收目標': 'cumTarget', '1–9月累積已提供實績': 'cumActual', '1–9月累積達成率（配對月份）': 'cumRate', '目標資料月數（含0）': 'targetMonths', '實績資料月數（含0）': 'actualMonths', '目標資料月平均(元)': 'targetAvg', '實績資料月平均(元)': 'actualAvg',
       '配對營運月數': 'pairMonths', '配對累積目標': 'pairTarget', '配對累積實績': 'pairActual', '配對累積差額': 'pairDiff', '營收與量能觀察': 'revObs', '特殊主管負荷分擔人數': 'specialN', '特殊主管期間接車台數': 'specialCars', '專職與特殊主管基準日均量': 'dailyBase', '服專專職基準負荷': 'saLoad', '出納專職基準負荷': 'caLoad',
       'Q1營收目標': 'q1T', 'Q1已提供實績': 'q1A', 'Q1配對達成率': 'q1R', 'Q2營收目標': 'q2T', 'Q2已提供實績': 'q2A', 'Q2配對達成率': 'q2R', 'Q3營收目標': 'q3T', 'Q3已提供實績': 'q3A', 'Q3配對達成率': 'q3R', 'Q3較Q2變化(pp)': 'q3vq2' },
-    '廠別月度量能': { '廠營收目標(元)': 'revTarget', '廠營收實績(元)': 'revActual', '廠營收達成率': 'revRate', '廠工作天數': 'workdays', '跨服專重複數': 'dupSA', '跨出納重複數': 'dupCA', '日均接車(廠工作日)': 'dailyCars', '日均結帳(廠工作日)': 'dailyOrders', '來源說明': 'note', 'APP指定次數': 'appCount', 'APP同來源接車數': 'appBase',
+    '廠別月度量能': { '廠別': 'plant', '廠營收目標(元)': 'revTarget', '廠營收實績(元)': 'revActual', '廠營收達成率': 'revRate', '廠工作天數': 'workdays', '跨服專重複數': 'dupSA', '跨出納重複數': 'dupCA', '日均接車(廠工作日)': 'dailyCars', '日均結帳(廠工作日)': 'dailyOrders', '來源說明': 'note', 'APP指定次數': 'appCount', 'APP同來源接車數': 'appBase',
       '目標數值有效': 'tValid', '實績數值有效': 'aValid', '目標實績配對': 'paired', '配對目標': 'pT', '配對實績': 'pA', '當月配對差額': 'pDiff', '季度': 'quarter', '營收資料狀態': 'revStatus', '營收適用月份': 'revApplicable', '原表營收目標': 'origT', '原表营收實績': 'origA' }
   };
 

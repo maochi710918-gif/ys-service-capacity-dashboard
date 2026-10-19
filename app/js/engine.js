@@ -167,15 +167,19 @@
   function prOf(x, pool, dir) {
     if (!nn(x)) return null;
     const n = pool.length; if (n <= 1) return null;
-    // 越高越好：低於本人比例；越少越好：高於本人比例（同值不互相加分，1–9月版 Excel 口徑）
-    return dir < 0 ? pool.filter((v) => v > x).length / (n - 1) : pool.filter((v) => v < x).length / (n - 1);
+    // 10.17 共同資格：同值共用分數（同值者各得一半）；全員同值＝50%；單一樣本不排名
+    return tiePR(x, pool, dir);
+  }
+  function tiePR(x, pool, dir) {
+    const n = pool.length; if (!nn(x) || n <= 1) return null;
+    const below = pool.filter((v) => (dir < 0 ? v > x : v < x)).length, eq = pool.filter((v) => v === x).length;
+    return (below + (eq - 1) / 2) / (n - 1);
   }
   function groupPR(p, pop, keyFn) {
     const k = keyFn(p);
     if (p.status !== '現行' || !nn(p.power) || k == null) return null;
     const g = pop.filter((q) => keyFn(q) === k && nn(q.power)).map((q) => q.power);
-    if (g.length <= 1) return null;
-    return g.filter((v) => v < p.power).length / (g.length - 1);
+    return tiePR(p.power, g, 1);
   }
 
   function score(people, role, cfg) {
@@ -207,7 +211,7 @@
     const scored = pop.filter((p) => nn(p.power));
     people.forEach((p) => {
       p.rank = (p.status === '現行' && nn(p.power)) ? 1 + scored.filter((q) => q.power > p.power).length : null;
-      p.prOverall = (p.status === '現行' && nn(p.power) && scored.length > 1) ? scored.filter((q) => q.power < p.power).length / (scored.length - 1) : null;
+      p.prOverall = (p.status === '現行' && nn(p.power) && scored.length > 1) ? tiePR(p.power, scored.map((q) => q.power), 1) : null;
       p.prLicense = groupPR(p, pop, (q) => q.license || null);
       p.prTenure = groupPR(p, pop, (q) => q.tenureGroup);
       if (p.status === '現行' && nn(p.power)) {

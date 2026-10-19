@@ -84,6 +84,8 @@
         '<div class="sw" style="margin-top:10px"><div><b class="up">▲ 優勢構面</b><ul>' + (strengths.map((x) => '<li>' + x.d.label + ' ' + F.pr(x.v) + '</li>').join('') || '<li>尚無構面PR ≥ 50</li>') + '</ul></div><div><b class="down">▼ 短板構面</b><ul>' + (weak.map((x) => '<li>' + x.d.label + ' ' + F.pr(x.v) + '<br><span class="note">建議：' + esc(S.cfg.training[x.d.key] || '') + '</span></li>').join('') || '<li>無明顯短板（各構面PR ≥ 50）</li>') + '</ul></div></div>') +
       '</div>' +
       '<div class="section-title">績效資訊</div>' + card('個人 vs 所屬廠／全公司／同證照／同年資 平均', '<div id="perf"></div>', { flush: true, tools: UI.exportBtns('pf') }) +
+      card('招攬執行明細（占綜合戰力 ' + Math.round((S.cfg.weights[role].solicit || 0) * 100) + '%）', '<div id="solT"></div>', { flush: true, tools: UI.exportBtns('solT'), sub: role === 'SA' ? '7 項單項PR各占 1/7' : '裕信、裕日每100張結帳工單本數PR各占 50%（本數與工單分母同涵蓋月份）' }) +
+      card('四構面負荷比較', '<div id="loadT"></div>', { flush: true, sub: '標準：' + (role === 'SA' ? '服專 11.5 台／日' : '出納 23 張／日') + '；承接量含跨廠支援' }) +
       powerDetail(p, D) +
       csiCard(p, D) + (root.retentionCard ? root.retentionCard(p) : '') +
       '<div class="section-title">視覺分析</div><div class="grid g2">' +
@@ -103,6 +105,25 @@
         { key: 'pr', label: '同職務PR', num: true, fmt: F.pr, cls: (r, v) => PX.colorCell('prX', v) }], rows: perfRows, footer: false
     });
     UI.bindExport(el, 'pf', p.name + '_績效比較', pt);
+    if (root.SOLX) {
+      const sr = root.SOLX.solicitRows(p);
+      const stt = table(el.querySelector('#solT'), { footer: false, rows: sr, columns: [{ key: 'item', label: '招攬項目' },
+        { key: 'act', label: '實績', num: true, html: (r) => nn(r.act) ? F.int(r.act) + (r.unit ? ' ' + r.unit : '') : '—' },
+        { key: 'tgt', label: '適用目標／分母', num: true, html: (r) => nn(r.tgt) ? F.int(r.tgt) : nn(r.base) ? F.int(r.base) + '（分母）' : '—' },
+        { key: 'rate', label: '達成率／密度', num: true, html: (r) => '<b>' + r.fmt(r.rate) + '</b><span class="note"> ' + r.kind + '</span>' },
+        { key: 'pr', label: '單項PR', num: true, fmt: F.pr, cls: (r, v) => PX.colorCell('pr', v) }, { key: 'share', label: '構面內占比', num: true, fmt: F.pct2 },
+        { key: 'dimPR', label: '招攬構面PR', num: true, fmt: F.pr }, { key: 'weighted', label: '加權得分', num: true, fmt: F.score }, { key: 'months', label: '資料月數', num: true, html: (r) => nn(r.months) ? r.months + ' 個月' : '—' }] });
+      UI.bindExport(el, 'solT', p.name + '_招攬明細', stt);
+    }
+    if (root.LOADX) {
+      const L = root.LOADX.loadOf(p, D), u = role === 'SA' ? '台' : '張';
+      el.querySelector('#loadT').innerHTML = '<div class="kv" style="padding:12px 14px;grid-template-columns:150px 1fr">' +
+        '<span>① 日均標準落差</span><span>' + F.d2(L.daily) + ' ' + u + '／日（標準 ' + L.std + '；' + F.signed1(L.dailyGap) + '，達成 ' + F.pct0(L.dailyRatio) + '）</span>' +
+        '<span>② 廠內負荷占比</span><span>' + F.pct2(L.plantShare) + (L.mainPlants ? '（主廠 ' + esc(L.mainPlants) + '；跨廠支援 ' + L.support + ' 筆）' : '') + '</span>' +
+        '<span>③ 公司同職務貢獻</span><span>' + F.pct2(L.coShare) + '（承接 ' + F.int(L.work) + ' ／ 公司 ' + F.int(L.coTotal) + ' ' + u + '）</span>' +
+        '<span>④ 同證照量能</span><span>' + (nn(L.licRatio) ? F.pct0(L.licRatio) + '（同證照 ' + L.licN + ' 人平均 ' + F.d2(L.licAvg) + '）' : '同證照不足 2 人，不比較') + '</span>' +
+        '<span>資料月數</span><span>' + L.months + ' 個月</span></div>';
+    }
 
     const dimAvg = (l, key) => mean(l.map((x) => x[key]));
     chart(el.querySelector('#r1'), {
@@ -357,7 +378,8 @@
   Pages.power = function (el, D) {
     const roles = ['SA', 'CA'].filter(roleOn);
     const ex = S.model.excelWeights || {};
-    el.innerHTML = '<div class="page-head"><div><h1>綜合戰力與 PR 分析</h1><p>PR＝同職務現行人員中低於本人之比例（越少越好之指標反向）；構面PR＝構面內指標PR平均；綜合戰力＝Σ權重×構面PR（缺構面時依有值權重重新配分）。資料完整度 &lt;' + Math.round(S.cfg.thresholds.scoreMinCompleteness * 100) + '% 不計分。</p></div></div>' +
+    el.innerHTML = '<div class="page-head"><div><h1>綜合戰力與 PR 分析</h1><p>計算鏈：原始成績 → 單項PR（同職務現職候選者比較，越少越好反向；同值共用分數、全員同值＝50%）→ 構面PR（構面內單項PR平均；招攬：服專 7 項各 1/7、出納 2 項各 50%）→ 加權得分＝構面PR×權重 → 綜合戰力＝Σ加權得分。</p>' +
+      '<p>資格：現職、≥3 個有效服務月且必要資料齊備（Excel「正式排名資料狀態」）；不符者不計戰力、不排名、不入九宮格與職涯階梯。缺值不當 0、不補零；個人頁「戰力計算明細」可逐項追溯。</p></div></div>' +
       '<div class="banner warn"><b>使用提醒</b><span>綜合戰力為管理診斷工具，<b>不是公司正式考核分數</b>，不建議作為單一人事決策依據。</span></div>' +
       roles.map((role) => {
         const W = S.cfg.weights[role], dims = S.cfg.dimensions[role];

@@ -111,7 +111,7 @@
       roles.map((role) => '<div class="section-title">' + roleName(role) + '人才梯隊</div><div class="grid g4" id="lv' + role + '"></div><div style="height:12px"></div>' +
         card(roleName(role) + '升階盤點明細', '<div id="lt' + role + '"></div>', { flush: true, tools: UI.exportBtns('lt' + role) })).join('');
     roles.forEach((role) => {
-      const cur = current(D.people[role]);
+      const cur = current(D.people[role]).filter((p) => p.formal !== false);   // 共同資格：僅正式排名資格者
       const L = S.cfg.ladder[role].slice();
       const levels = L.map((lic) => ({ lic, ppl: cur.filter((p) => p.license === lic) }));
       if (role === 'CA') levels.push({ lic: '帶訓或儲備人選', ppl: cur.filter((p) => /帶訓/.test(p.promotion) || p.talentType === '核心／帶訓'), virtual: true });
@@ -153,7 +153,7 @@
     if (!mets.find((m) => m[0] === rState.mk)) rState.mk = 'power';
     const m = mets.find((x) => x[0] === rState.mk);
     const get = (p) => m[0] === 'growth' ? (role === 'SA' ? p.trendCars : p.trendOrders) : p[m[0]];
-    const cur = current(D.people[role]).filter((p) => nn(get(p)));
+    const cur = current(D.people[role]).filter((p) => p.formal !== false && nn(get(p)));   // 共同資格：僅正式排名資格者
     cur.sort((a, b) => rState.dir === 'desc' ? get(b) - get(a) : get(a) - get(b));
     const top = rState.n === 'all' ? cur : cur.slice(0, Number(rState.n));
     const alerts = PX.buildAlerts(D);
@@ -162,7 +162,7 @@
     const types = Array.from(new Set(alerts.map((a) => a.label)));
     const shown = rState.af ? alerts.filter((a) => a.label === rState.af) : alerts;
     const T = S.cfg.thresholds;
-    el.innerHTML = '<div class="page-head"><div><h1>排行與異常管理</h1><p>排行僅比較同職務現行人員；異常門檻集中於「指標與權重設定」，可調整。</p></div></div>' +
+    el.innerHTML = '<div class="page-head"><div><h1>排行與異常管理</h1><p>排行僅比較同職務、現職且具正式排名資格者（≥3 有效服務月、必要資料齊備）；異常門檻集中於「指標與權重設定」，可調整。</p></div></div>' +
       '<div class="grid g2">' + card('排行榜', '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">' + (S.role === 'all' ? UI.seg('rrole', [['SA', '服專'], ['CA', '出納']], role) : '') + UI.seg('rn', [['10', 'Top 10'], ['20', 'Top 20'], ['all', '全部']], rState.n) + UI.seg('rdir', [['desc', '由高至低'], ['asc', '由低至高']], rState.dir) + '</div>' +
         '<div class="chips-sel" id="rm">' + mets.map((x) => '<button data-k="' + x[0] + '" class="' + (x[0] === m[0] ? 'on' : '') + '">' + x[1] + '</button>').join('') + '</div><div class="chart tall" id="rc"></div>', { sub: roleName(role) + '｜' + m[1] }) +
       card('排行明細', '<div id="rt"></div>', { flush: true, tools: UI.exportBtns('rt') }) + '</div>' +
