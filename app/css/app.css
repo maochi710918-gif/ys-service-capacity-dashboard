@@ -75,6 +75,11 @@ a { color: var(--info); text-decoration: none; }
 /* ---------------- filter bar ---------------- */
 .filterbar { position: sticky; top: 56px; z-index: 25; background: var(--surface); border-bottom: 1px solid var(--line); padding: 10px 18px 8px; display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: flex-end; box-shadow: 0 2px 6px rgba(15,30,56,.04); }
 .f { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.qbtns { display: flex; height: 30px; border: 1px solid var(--line-2); border-radius: 6px; overflow: hidden; }
+.qbtns button { border: 0; border-left: 1px solid var(--line-2); background: var(--surface); color: var(--ink); padding: 0 11px; font-size: 13px; cursor: pointer; }
+.qbtns button:first-child { border-left: 0; }
+.qbtns button:hover { background: var(--line); }
+.qbtns button.on { background: var(--navy-800); color: #fff; font-weight: 600; }
 .f label { font-size: 11px; color: var(--muted); white-space: nowrap; }
 .f select, .f input { height: 30px; border: 1px solid var(--line-2); border-radius: 6px; padding: 0 8px; background: var(--surface); color: var(--ink); font-size: 13px; min-width: 88px; max-width: 150px; }
 .f input.sm { width: 64px; min-width: 64px; }

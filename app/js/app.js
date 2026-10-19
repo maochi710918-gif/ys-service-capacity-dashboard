@@ -41,6 +41,9 @@
     const names = P.SA.concat(P.CA).filter((p) => Store.personPass(p, { ignorePlant: true }) || true).map((p) => p.name);
     let h = '';
     h += sel('period', '年／季／月', Store.periodOptions(), false);
+    // 季度快速按鈕：全期／Q1／Q2／Q3…（依資料月份自動產生）
+    const qBtns = [['all', '全期']].concat(Store.periodOptions().filter((o) => /^Q\d$/.test(o[0])).map((o) => [o[0], o[0]]));
+    h += '<div class="f"><label>快速期間</label><div class="qbtns">' + qBtns.map((o) => '<button type="button" data-q="' + o[0] + '" class="' + (f.period === o[0] ? 'on' : '') + '" title="' + esc((Store.periodOptions().find((x) => x[0] === o[0]) || [])[1] || '') + '">' + o[1] + '</button>').join('') + '</div></div>';
     h += '<div class="f"><label>日期區間</label><div class="pair"><select data-f="mStart">' + ms.map((m) => '<option' + (m === f.mStart ? ' selected' : '') + '>' + m + '</option>').join('') + '</select><span>~</span><select data-f="mEnd">' + ms.map((m) => '<option' + (m === f.mEnd ? ' selected' : '') + '>' + m + '</option>').join('') + '</select></div></div>';
     h += sel('gran', '圖表粒度', [['month', '月'], ['quarter', '季'], ['year', '年']], false);
     h += sel('plant', '服務廠', O.plants, '全部服務廠', sc === 'plant' || sc === 'self');
@@ -71,6 +74,7 @@
         }, el.tagName === 'INPUT' ? 350 : 0);
       });
     });
+    $('filterbar').querySelectorAll('[data-q]').forEach((b) => b.addEventListener('click', () => { Store.setPeriod(b.dataset.q); render(true); }));
     $('filterbar').querySelector('[data-role-sel]').addEventListener('change', (e) => setRole(e.target.value));
     $('fClear').addEventListener('click', clearFilters);
     $('fCompany').addEventListener('click', () => { clearFilters(); setRole('all'); go('board'); });
